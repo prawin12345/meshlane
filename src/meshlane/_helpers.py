@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from os import PathLike
-import sys
 from pathlib import Path
 from typing import IO
 
@@ -59,7 +59,9 @@ def _filetypes_from_path(path: Path) -> list[str]:
     return out
 
 
-def read(filename: str | PathLike[str] | IO[bytes], file_format: str | None = None) -> Mesh:
+def read(
+    filename: str | PathLike[str] | IO[bytes], file_format: str | None = None
+) -> Mesh:
     """Reads an unstructured mesh with added data.
 
     :param filenames: The files/PathLikes to read from.
@@ -73,7 +75,9 @@ def read(filename: str | PathLike[str] | IO[bytes], file_format: str | None = No
     return _read_file(Path(filename), file_format)
 
 
-def _read_buffer(filename: str | PathLike[str] | IO[bytes], file_format: str | None) -> Mesh:
+def _read_buffer(
+    filename: str | PathLike[str] | IO[bytes], file_format: str | None
+) -> Mesh:
     if file_format is None:
         raise ReadError("File format must be given if buffer is used")
     if file_format == "tetgen":
@@ -149,7 +153,12 @@ def _pick_best_format(file_formats, mesh):
     return file_formats[0]
 
 
-def write(filename: str | PathLike[str] | IO[bytes], mesh: Mesh, file_format: str | None = None, **kwargs) -> None:
+def write(
+    filename: str | PathLike[str] | IO[bytes],
+    mesh: Mesh,
+    file_format: str | None = None,
+    **kwargs,
+) -> None:
     """Writes mesh together with data to a file.
 
     :params filename: File to write to.

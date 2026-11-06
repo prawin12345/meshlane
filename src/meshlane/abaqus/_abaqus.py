@@ -4,6 +4,8 @@ I/O for Abaqus inp files.
 
 import io
 import pathlib
+from os import PathLike
+from typing import IO
 
 import numpy as np
 
@@ -164,7 +166,7 @@ _EMPTY_PART = {
 }
 
 
-def read(filename):
+def read(filename: str | PathLike[str] | IO[bytes]):
     """Reads a Abaqus inp file."""
     # A passed-in buffer is read as-is.
     if is_buffer(filename, "r"):

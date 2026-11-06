@@ -146,14 +146,13 @@ class Mesh:
     point_sets: dict[str, NDArray[np.integer]]
     cell_data: dict[str, list[NDArray[np.floating]]]
 
-
     def __init__(
         self,
         points: NDArray[np.floating],
         cells: dict[str, np.ndarray] | list[tuple[str, np.ndarray] | CellBlock],
         point_data: dict[str, np.ndarray] | None = None,
         cell_data: dict[str, list[NDArray[np.floating]]] | None = None,
-        field_data:  dict[str, NDArray[np.integer]] | None = None,
+        field_data: dict[str, NDArray[np.integer]] | None = None,
         point_sets: dict[str, NDArray[np.integer]] | None = None,
         cell_sets: dict[str, list[NDArray[np.integer]]] | None = None,
         gmsh_periodic=None,
@@ -274,7 +273,12 @@ class Mesh:
     def copy(self) -> Self:
         return copy.deepcopy(self)
 
-    def write(self, path_or_buf: str | PathLike[str] | IO[bytes], file_format: str | None = None, **kwargs) -> None:
+    def write(
+        self,
+        path_or_buf: str | PathLike[str] | IO[bytes],
+        file_format: str | None = None,
+        **kwargs,
+    ) -> None:
         # avoid circular import
         from ._helpers import write
 
@@ -394,7 +398,11 @@ class Mesh:
         }
 
     @classmethod
-    def read(cls, path_or_buf: str | PathLike[str] | IO[bytes], file_format: str | None = None) -> Mesh:
+    def read(
+        cls,
+        path_or_buf: str | PathLike[str] | IO[bytes],
+        file_format: str | None = None,
+    ) -> Mesh:
         # avoid circular import
         from ._helpers import read
 
