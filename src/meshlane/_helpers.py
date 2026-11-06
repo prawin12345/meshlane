@@ -120,7 +120,7 @@ def _read_file(path: Path, file_format: str | None) -> Mesh:
 
 
 def write_points_cells(
-    filename: str | PathLike[str] | IO[bytes],
+    filename: str | PathLike[str],
     points: np.ndarray,
     cells: dict[str, np.ndarray] | list[tuple[str, np.ndarray] | CellBlock],
     point_data: dict[str, np.ndarray] | None = None,
