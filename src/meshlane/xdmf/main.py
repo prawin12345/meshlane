@@ -29,7 +29,7 @@ from .common import (
 )
 
 
-def read(filename: str | os.PathLike[str]):
+def read(filename: str | os.PathLike[str]) -> Mesh:
     return XdmfReader(filename).read()
 
 
