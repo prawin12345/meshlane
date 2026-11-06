@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import pathlib
 from io import BytesIO
+from typing import Any, Self
 from xml.etree import ElementTree as ET
 
 import numpy as np
@@ -24,7 +25,7 @@ from .common import (
 
 
 class TimeSeriesReader:
-    def __init__(self, filename):  # noqa: C901
+    def __init__(self, filename: str | os.PathLike[str]):  # noqa: C901
         self.filename = pathlib.Path(filename)
 
         parser = ET.XMLParser()
@@ -81,17 +82,17 @@ class TimeSeriesReader:
         if self.mesh_grid.tag != "Grid":
             raise ReadError()
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *_):
+    def __exit__(self, *_) -> None:
         # Those files are opened in _read_data_item()
         for f in self.hdf5_files.values():
             f.close()
 
     def read_points_cells(self):
         points = None
-        cells = []
+        cells: list[CellBlock] = []
 
         assert self.mesh_grid is not None
         for c in self.mesh_grid:
@@ -167,8 +168,8 @@ class TimeSeriesReader:
 
         return t, point_data, cell_data
 
-    def _read_data_item(self, data_item):
-        dims = [int(d) for d in data_item.get("Dimensions").split()]
+    def _read_data_item(self, data_item: ET.Element[str]) -> np.ndarray:
+        dims = [int(d) for d in data_item.get("Dimensions", "").split()]
 
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files out there
         # use both keys interchangeably.
@@ -185,12 +186,15 @@ class TimeSeriesReader:
             # <https://xdmf.org/index.php/XDMF_Model_and_Format#XML_Element_.28Xdmf_ClassName.29_and_Default_XML_Attributes>
             data_type = "Float"
 
+        assert data_type is not None
+
         try:
             precision = data_item.attrib["Precision"]
         except KeyError:
             precision = "4"
 
         data_format = data_item.attrib["Format"]
+        assert data_item.text is not None
 
         if data_format == "XML":
             return np.fromstring(
@@ -225,7 +229,7 @@ class TimeSeriesReader:
             raise ReadError()
 
         for key in h5path[1:].split("/"):
-            f = f[key]
+            f: Any = f[key]
         # `[()]` gives a np.ndarray
         return f[()]
 

@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 
 from .._exceptions import ReadError
 from .._mesh import CellBlock
@@ -108,7 +109,7 @@ xdmf_idx_to_meshio_type = {
 meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
 
 
-def translate_mixed_cells(data):
+def translate_mixed_cells(data: NDArray[np.integer]) -> list[CellBlock]:
     # Translate it into the cells dictionary.
     # `data` is a one-dimensional vector with
     # (cell_type1, p0, p1, ... ,pk, cell_type2, p10, p11, ..., p1k, ...
@@ -128,12 +129,12 @@ def translate_mixed_cells(data):
     }
 
     # collect types and offsets
-    types = []
+    types_list: list[int] = []
     offsets = []
     r = 0
     while r < len(data):
         xdmf_type = data[r]
-        types.append(xdmf_type)
+        types_list.append(xdmf_type)
         offsets.append(r)
         if xdmf_type == 2:  # line
             if data[r + 1] != 2:  # polyline
@@ -142,14 +143,14 @@ def translate_mixed_cells(data):
         r += 1
         r += xdmf_idx_to_num_nodes[xdmf_type]
 
-    types = np.array(types)
+    types: NDArray[np.integer] = np.array(types_list)
     offsets = np.array(offsets)
 
     b = np.concatenate([[0], np.where(types[:-1] != types[1:])[0] + 1, [len(types)]])
-    cells = []
+    cells: list[CellBlock] = []
     for start, end in zip(b[:-1], b[1:]):
-        meshio_type = xdmf_idx_to_meshio_type[types[start]]
-        n = xdmf_idx_to_num_nodes[types[start]]
+        meshio_type = xdmf_idx_to_meshio_type[int(types[start])]
+        n = xdmf_idx_to_num_nodes[int(types[start])]
         point_offsets = offsets[start:end] + (2 if types[start] == 2 else 1)
         indices = np.array([np.arange(n) + o for o in point_offsets])
         cells.append(CellBlock(meshio_type, data[indices]))
@@ -157,7 +158,7 @@ def translate_mixed_cells(data):
     return cells
 
 
-def attribute_type(data):
+def attribute_type(data: np.ndarray) -> str:
     # <https://xdmf.org/index.php/XDMF_Model_and_Format#Attribute>
     if len(data.shape) == 1 or (len(data.shape) == 2 and data.shape[1] == 1):
         return "Scalar"

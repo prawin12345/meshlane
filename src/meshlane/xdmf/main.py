@@ -6,9 +6,12 @@ https://xdmf.org/index.php/XDMF_Model_and_Format
 import os
 import pathlib
 from io import BytesIO
+from typing import Any
 from xml.etree import ElementTree as ET
 
 import numpy as np
+from _typeshed import ReadableBuffer
+from numpy.typing import NDArray
 
 from .._common import cell_data_from_raw, raw_from_cell_data, write_xml
 from .._exceptions import ReadError, WriteError
@@ -26,15 +29,15 @@ from .common import (
 )
 
 
-def read(filename):
+def read(filename: str | os.PathLike[str]):
     return XdmfReader(filename).read()
 
 
 class XdmfReader:
-    def __init__(self, filename):
+    def __init__(self, filename: str | os.PathLike[str]):
         self.filename = filename
 
-    def read(self):
+    def read(self) -> Mesh:
         parser = ET.XMLParser()
         tree = ET.parse(self.filename, parser)
         root = tree.getroot()
@@ -52,19 +55,27 @@ class XdmfReader:
 
         return self.read_xdmf3(root)
 
-    def _read_data_item(self, data_item, root=None):
+    def _read_data_item(
+        self, data_item: ET.Element[str], root: ET.Element[str] | None = None
+    ) -> np.ndarray:
         import h5py
+
+        assert data_item.text is not None
 
         if "Reference" in data_item.attrib:
             reference = data_item.attrib["Reference"]
             xpath = (data_item.text if reference == "XML" else reference).strip()
             if xpath.startswith("/"):
-                return self._read_data_item(
-                    root.find(".//" + "/".join(xpath.split("/")[2:])), root
-                )
+                assert root is not None
+                data_item_ref = root.find(".//" + "/".join(xpath.split("/")[2:]))
+                assert data_item_ref is not None
+
+                return self._read_data_item(data_item_ref, root)
             raise ValueError(f"Can't read XPath {xpath}.")
 
-        dims = [int(d) for d in data_item.get("Dimensions").split()]
+        dimensions_str = data_item.get("Dimensions")
+        assert dimensions_str is not None
+        dims = [int(d) for d in dimensions_str.split()]
 
         # Actually, `NumberType` is XDMF2 and `DataType` XDMF3, but many files
         # out there use both keys interchangeably.
@@ -113,12 +124,14 @@ class XdmfReader:
             h5path = h5path[1:]
 
         for key in h5path.split("/"):
-            f = f[key]
+            f: Any = f[key]
         # `[()]` gives a np.ndarray
         return f[()]
 
-    def read_information(self, c_data):
-        field_data = {}
+    def read_information(
+        self, c_data: str | ReadableBuffer
+    ) -> dict[str, NDArray[np.integer]]:
+        field_data: dict[str, NDArray[np.integer]] = {}
         root = ET.fromstring(c_data)
         for child in root:
             str_tag = child.attrib["key"]
@@ -129,7 +142,7 @@ class XdmfReader:
             field_data[str_tag] = np.array([num_tag, dim])
         return field_data
 
-    def read_xdmf2(self, root):  # noqa: C901
+    def read_xdmf2(self, root: ET.Element[str]) -> Mesh:  # noqa: C901
         domains = list(root)
         if len(domains) != 1:
             raise ReadError()
@@ -148,7 +161,7 @@ class XdmfReader:
             raise ReadError()
 
         points = None
-        cells = []
+        cells: list[CellBlock] = []
         point_data = {}
         cell_data_raw = {}
         field_data = {}
@@ -170,12 +183,16 @@ class XdmfReader:
 
                 topology_type = c.attrib["TopologyType"]
                 if topology_type == "Mixed":
+                    assert data_items[0].text is not None
+                    dimensions = data_items[0].get("Dimensions")
+                    assert dimensions is not None
+
                     cells = translate_mixed_cells(
                         np.fromstring(
                             data_items[0].text,
-                            int,
-                            int(data_items[0].get("Dimensions")),
-                            " ",
+                            dtype=int,
+                            count=int(dimensions),
+                            sep=" ",
                         )
                     )
                 else:
@@ -222,6 +239,8 @@ class XdmfReader:
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
+        assert points is not None
+
         return Mesh(
             points,
             cells,
@@ -230,7 +249,7 @@ class XdmfReader:
             field_data=field_data,
         )
 
-    def read_xdmf3(self, root):  # noqa: C901
+    def read_xdmf3(self, root: ET.Element[str]) -> Mesh:  # noqa: C901
         domains = list(root)
         if len(domains) != 1:
             raise ReadError()
@@ -323,6 +342,8 @@ class XdmfReader:
 
         cell_data = cell_data_from_raw(cells, cell_data_raw)
 
+        assert points is not None
+
         return Mesh(
             points,
             cells,
@@ -334,7 +355,12 @@ class XdmfReader:
 
 class XdmfWriter:
     def __init__(
-        self, filename, mesh, data_format="HDF", compression="gzip", compression_opts=4
+        self,
+        filename: str | os.PathLike[str],
+        mesh: Mesh,
+        data_format: str = "HDF",
+        compression: str = "gzip",
+        compression_opts: int = 4,
     ):
         import h5py
 
@@ -372,7 +398,7 @@ class XdmfWriter:
 
         write_xml(filename, xdmf_file)
 
-    def numpy_to_xml_string(self, data):
+    def numpy_to_xml_string(self, data: np.ndarray) -> str:
         if self.data_format == "XML":
             s = BytesIO()
             fmt = dtype_to_format_string[data.dtype.name]
@@ -399,7 +425,7 @@ class XdmfWriter:
         )
         return os.path.basename(self.h5_filename) + ":/" + name
 
-    def write_points(self, grid, points):
+    def write_points(self, grid: ET.Element, points: np.ndarray) -> None:
         if points.shape[1] > 3:
             raise WriteError("Can only write points up to dimension 3.")
 
@@ -418,7 +444,7 @@ class XdmfWriter:
         )
         data_item.text = self.numpy_to_xml_string(points)
 
-    def write_cells(self, cells, grid):
+    def write_cells(self, cells: list[CellBlock], grid: ET.Element) -> None:
         if len(cells) == 0:
             return
         if len(cells) == 1:
@@ -486,7 +512,9 @@ class XdmfWriter:
             )
             data_item.text = self.numpy_to_xml_string(cd)
 
-    def write_point_data(self, point_data, grid):
+    def write_point_data(
+        self, point_data: dict[str, np.ndarray], grid: ET.Element
+    ) -> None:
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid,
@@ -507,7 +535,9 @@ class XdmfWriter:
             )
             data_item.text = self.numpy_to_xml_string(data)
 
-    def write_cell_data(self, cell_data, grid):
+    def write_cell_data(
+        self, cell_data: dict[str, list[NDArray[np.floating]]], grid: ET.Element
+    ) -> None:
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
             att = ET.SubElement(
@@ -543,8 +573,14 @@ class XdmfWriter:
     #     information.append(CDATA(ET.tostring(info).decode()))
 
 
-def write(*args, **kwargs):
-    XdmfWriter(*args, **kwargs)
+def write(
+    filename: str | os.PathLike[str],
+    mesh: Mesh,
+    data_format: str = "HDF",
+    compression: str = "gzip",
+    compression_opts: int = 4,
+) -> None:
+    XdmfWriter(filename, mesh, data_format, compression, compression_opts)
 
 
 # TODO register all xdmf except hdf outside this try block

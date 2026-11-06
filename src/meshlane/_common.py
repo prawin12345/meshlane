@@ -3,6 +3,7 @@ from __future__ import annotations
 from xml.etree import ElementTree as ET
 
 import numpy as np
+from numpy.typing import NDArray
 from rich.console import Console
 
 from src.meshlane import CellBlock
@@ -94,7 +95,7 @@ def cell_data_from_raw(cells: list[CellBlock], cell_data_raw):
     return {name: np.split(d, cs) for name, d in cell_data_raw.items()}
 
 
-def raw_from_cell_data(cell_data):
+def raw_from_cell_data(cell_data: dict[str, list[NDArray[np.floating]]]):
     return {name: np.concatenate(value) for name, value in cell_data.items()}
 
 
