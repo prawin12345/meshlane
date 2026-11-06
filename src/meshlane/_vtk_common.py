@@ -5,7 +5,7 @@ from ._exceptions import ReadError
 from ._mesh import CellBlock
 
 # https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
-vtk_to_meshio_type = {
+vtk_to_meshio_type: dict[int, str] = {
     0: "empty",
     1: "vertex",
     # 2: 'poly_vertex',

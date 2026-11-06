@@ -9,8 +9,8 @@ from numpy.typing import ArrayLike
 from .._common import warn
 from .._exceptions import ReadError, WriteError
 
-c_int = np.dtype("int32")
-c_double = np.dtype("float64")
+c_int: np.dtype[np.int32] = np.dtype("int32")
+c_double: np.dtype[np.float64] = np.dtype("float64")
 
 
 def _fast_forward_to_end_block(f, block):

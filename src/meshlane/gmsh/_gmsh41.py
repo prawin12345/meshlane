@@ -5,7 +5,7 @@ I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2+), cf.
 
 from functools import partial
 from os import PathLike
-from typing import IO
+from typing import IO, Any
 
 import numpy as np
 
@@ -25,9 +25,9 @@ from .common import (
     _write_physical_names,
 )
 
-c_int = np.dtype("i")
-c_size_t = np.dtype("P")
-c_double = np.dtype("d")
+c_int: np.dtype[np.int32] = np.dtype("i")
+c_size_t: np.dtype[Any] = np.dtype("P")
+c_double: np.dtype[np.float64] = np.dtype("d")
 
 
 def _size_type(data_size):
@@ -228,7 +228,7 @@ def _read_elements(
                 ),
                 dtype=type(num_ele),
             )
-        tpe = _gmsh_to_meshio_type[type_ele]
+        tpe = _gmsh_to_meshio_type[int(type_ele)]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_size_t, int(num_ele * (1 + num_nodes_per_ele))).reshape(
             (num_ele, -1)

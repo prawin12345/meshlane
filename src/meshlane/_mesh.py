@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 from ._common import num_nodes_per_cell, warn
 
-topological_dimension = {
+topological_dimension: dict[str, int] = {
     "line": 1,
     "polygon": 2,
     "polygon2": 2,

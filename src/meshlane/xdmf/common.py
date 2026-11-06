@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 from .._exceptions import ReadError
 from .._mesh import CellBlock
 
-numpy_to_xdmf_dtype = {
+numpy_to_xdmf_dtype: dict[str, tuple[str, str]] = {
     "int8": ("Int", "1"),
     "int16": ("Int", "2"),
     "int32": ("Int", "4"),
@@ -16,9 +16,9 @@ numpy_to_xdmf_dtype = {
     "float32": ("Float", "4"),
     "float64": ("Float", "8"),
 }
-xdmf_to_numpy_type = {v: k for k, v in numpy_to_xdmf_dtype.items()}
+xdmf_to_numpy_type: dict[tuple[str, str], str] = {v: k for k, v in numpy_to_xdmf_dtype.items()}
 
-dtype_to_format_string = {
+dtype_to_format_string: dict[str, str] = {
     "int32": "%d",
     "int64": "%d",
     "uint32": "%d",
@@ -34,7 +34,7 @@ dtype_to_format_string = {
 # for XDMF types.
 # There appears to be no particular consistency, so allow for different
 # alternatives as well.
-meshio_to_xdmf_type = {
+meshio_to_xdmf_type: dict[str, list[str]] = {
     "vertex": ["Polyvertex"],
     "line": ["Polyline"],
     "line3": ["Edge_3"],
@@ -63,13 +63,13 @@ meshio_to_xdmf_type = {
     "hexahedron1000": ["Hexahedron_1000", "Hex_100"],
     "hexahedron1331": ["Hexahedron_1331", "Hex_1331"],
 }
-xdmf_to_meshio_type = {v: k for k, vals in meshio_to_xdmf_type.items() for v in vals}
+xdmf_to_meshio_type: dict[str, str] = {v: k for k, vals in meshio_to_xdmf_type.items() for v in vals}
 
 
 # Check out
 # <https://gitlab.kitware.com/xdmf/xdmf/blob/master/XdmfTopologyType.cpp>
 # for the list of indices.
-xdmf_idx_to_meshio_type = {
+xdmf_idx_to_meshio_type: dict[int, str] = {
     0x1: "vertex",
     0x2: "line",
     0x4: "triangle",
@@ -106,7 +106,7 @@ xdmf_idx_to_meshio_type = {
     # 0x47: 'hexahedron_spectral_1000',
     # 0x48: 'hexahedron_spectral_1331',
 }
-meshio_type_to_xdmf_index = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
+meshio_type_to_xdmf_index: dict[str, int] = {v: k for k, v in xdmf_idx_to_meshio_type.items()}
 
 
 def translate_mixed_cells(data: NDArray[np.integer]) -> list[CellBlock]:

@@ -26,8 +26,8 @@ from .common import (
     _write_physical_names,
 )
 
-c_int = np.dtype("i")
-c_double = np.dtype("d")
+c_int: np.dtype[np.int32] = np.dtype("i")
+c_double: np.dtype[np.float64] = np.dtype("d")
 
 
 def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int):
@@ -212,7 +212,7 @@ def _read_cells_binary(f, cells, cell_tags, total_num_cells):
     while num_elems < total_num_cells:
         # read element header
         elem_type, num_elems0, num_tags = np.fromfile(f, count=3, dtype=c_int)
-        t = _gmsh_to_meshio_type[elem_type]
+        t = _gmsh_to_meshio_type[int(elem_type)]
         num_nodes_per_elem = num_nodes_per_cell[t]
 
         # read element data

@@ -10,7 +10,7 @@ from src.meshlane import CellBlock
 
 # See <https://github.com/nschloe/meshio/wiki/Node-ordering-in-cells> for the node
 # ordering.
-num_nodes_per_cell = {
+num_nodes_per_cell: dict[str, int] = {
     "vertex": 1,
     "line": 2,
     "triangle": 3,

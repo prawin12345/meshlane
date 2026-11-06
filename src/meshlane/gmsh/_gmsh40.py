@@ -26,10 +26,10 @@ from .common import (
     _write_physical_names,
 )
 
-c_int = np.dtype("i")
-c_long = np.dtype("l")
-c_ulong = np.dtype("L")
-c_double = np.dtype("d")
+c_int: np.dtype[np.int32] = np.dtype("i")
+c_long: np.dtype[np.int32 | np.int64] = np.dtype("l")
+c_ulong: np.dtype[np.uint32 | np.uint64] = np.dtype("L")
+c_double: np.dtype[np.float64] = np.dtype("d")
 
 
 def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int) -> Mesh:
@@ -173,7 +173,7 @@ def _read_elements(
         # tagEntity(int) dimEntity(int) typeEle(int) numElements(unsigned long)
         tag_entity, dim_entity, type_ele = fromfile(f, c_int, 3)
         (num_ele,) = fromfile(f, c_ulong, 1)
-        tpe = _gmsh_to_meshio_type[type_ele]
+        tpe = _gmsh_to_meshio_type[int(type_ele)]
         num_nodes_per_ele = num_nodes_per_cell[tpe]
         d = fromfile(f, c_int, int(num_ele * (1 + num_nodes_per_ele))).reshape(
             (num_ele, -1)
