@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from os import PathLike
-from typing import IO, Mapping, Self, Sequence
+from typing import Mapping, Self, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
