@@ -3,17 +3,17 @@ I/O for MED/Salome, cf.
 <https://docs.salome-platform.org/latest/dev/MEDCoupling/developer/med-file.html>.
 """
 
-import numpy as np
 import re
+from collections import defaultdict
 
-from ._med41 import FieldBitmaskWriter
-from . import _orient
+import numpy as np
 
 from .._common import num_nodes_per_cell
 from .._exceptions import ReadError, WriteError
 from .._helpers import register_format
-from collections import defaultdict
 from .._mesh import Mesh
+from . import _orient
+from ._med41 import FieldBitmaskWriter
 
 # https://docs.salome-platform.org/5/med/dev/med__outils_8hxx.html
 meshio_to_med_type = {
@@ -62,8 +62,28 @@ _med_node_perm = {
     "tetra10": [0, 1, 3, 2, 4, 8, 7, 6, 5, 9],
     "pyramid13": [0, 3, 2, 1, 4, 8, 7, 6, 5, 9, 12, 11, 10],
     "wedge15": [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8, 12, 13, 14],
-    "hexahedron20": [4, 5, 6, 7, 0, 1, 2, 3, 12, 13, 14, 15, 8, 9, 10, 11,
-                     16, 17, 18, 19],
+    "hexahedron20": [
+        4,
+        5,
+        6,
+        7,
+        0,
+        1,
+        2,
+        3,
+        12,
+        13,
+        14,
+        15,
+        8,
+        9,
+        10,
+        11,
+        16,
+        17,
+        18,
+        19,
+    ],
 }
 
 
@@ -119,26 +139,52 @@ numpy_to_med_type = {
 # Dictionnaire de traduction pour le tracker MED 4.1
 med_to_geo_type = {
     "PO1": "MED_POINT1",
-    "SE2": "MED_SEG2", "SE3": "MED_SEG3", "SE4": "MED_SEG4",
-    "TR3": "MED_TRIA3", "TR6": "MED_TRIA6", "TR7": "MED_TRIA7",
-    "QU4": "MED_QUAD4", "QU8": "MED_QUAD8", "QU9": "MED_QUAD9",
-    "TE4": "MED_TETRA4", "T10": "MED_TETRA10",
-    "HE8": "MED_HEXA8", "H20": "MED_HEXA20", "H27": "MED_HEXA27",
-    "PY5": "MED_PYRA5", "P13": "MED_PYRA13",
-    "PE6": "MED_PENTA6", "P15": "MED_PENTA15", "PE18": "MED_PENTA18",
-    "POG": "MED_POLYGON", "POG2": "MED_POLYGON2",
+    "SE2": "MED_SEG2",
+    "SE3": "MED_SEG3",
+    "SE4": "MED_SEG4",
+    "TR3": "MED_TRIA3",
+    "TR6": "MED_TRIA6",
+    "TR7": "MED_TRIA7",
+    "QU4": "MED_QUAD4",
+    "QU8": "MED_QUAD8",
+    "QU9": "MED_QUAD9",
+    "TE4": "MED_TETRA4",
+    "T10": "MED_TETRA10",
+    "HE8": "MED_HEXA8",
+    "H20": "MED_HEXA20",
+    "H27": "MED_HEXA27",
+    "PY5": "MED_PYRA5",
+    "P13": "MED_PYRA13",
+    "PE6": "MED_PENTA6",
+    "P15": "MED_PENTA15",
+    "PE18": "MED_PENTA18",
+    "POG": "MED_POLYGON",
+    "POG2": "MED_POLYGON2",
     "POE": "MED_POLYHEDRON",
 }
 med_type_to_entity = {
     "PO1": "MED_NODE_ELEMENT",
-    "SE2": "MED_CELL", "SE3": "MED_CELL", "SE4": "MED_CELL",
-    "TR3": "MED_CELL", "TR6": "MED_CELL", "TR7": "MED_CELL",
-    "QU4": "MED_CELL", "QU8": "MED_CELL", "QU9": "MED_CELL",
-    "TE4": "MED_CELL", "T10": "MED_CELL",
-    "HE8": "MED_CELL", "H20": "MED_CELL", "H27": "MED_CELL",
-    "PY5": "MED_CELL", "P13": "MED_CELL",
-    "PE6": "MED_CELL", "P15": "MED_CELL", "PE18": "MED_CELL",
-    "POG": "MED_CELL", "POG2": "MED_CELL",
+    "SE2": "MED_CELL",
+    "SE3": "MED_CELL",
+    "SE4": "MED_CELL",
+    "TR3": "MED_CELL",
+    "TR6": "MED_CELL",
+    "TR7": "MED_CELL",
+    "QU4": "MED_CELL",
+    "QU8": "MED_CELL",
+    "QU9": "MED_CELL",
+    "TE4": "MED_CELL",
+    "T10": "MED_CELL",
+    "HE8": "MED_CELL",
+    "H20": "MED_CELL",
+    "H27": "MED_CELL",
+    "PY5": "MED_CELL",
+    "P13": "MED_CELL",
+    "PE6": "MED_CELL",
+    "P15": "MED_CELL",
+    "PE18": "MED_CELL",
+    "POG": "MED_CELL",
+    "POG2": "MED_CELL",
     "POE": "MED_CELL",
 }
 
@@ -147,14 +193,28 @@ med_type_to_entity = {
 # dim*100 + n_nodes (point = 1); polygons/polyhedra use 400/500 (see writer).
 med_geo_code = {
     "PO1": 1,
-    "SE2": 102, "SE3": 103, "SE4": 104,
-    "TR3": 203, "TR6": 206, "TR7": 207,
-    "QU4": 204, "QU8": 208, "QU9": 209,
-    "TE4": 304, "T10": 310,
-    "HE8": 308, "H20": 320, "H27": 327,
-    "PY5": 305, "P13": 313,
-    "PE6": 306, "P15": 315, "PE18": 318,
-    "POG": 400, "POG2": 420, "POE": 500,
+    "SE2": 102,
+    "SE3": 103,
+    "SE4": 104,
+    "TR3": 203,
+    "TR6": 206,
+    "TR7": 207,
+    "QU4": 204,
+    "QU8": 208,
+    "QU9": 209,
+    "TE4": 304,
+    "T10": 310,
+    "HE8": 308,
+    "H20": 320,
+    "H27": 327,
+    "PY5": 305,
+    "P13": 313,
+    "PE6": 306,
+    "P15": 315,
+    "PE18": 318,
+    "POG": 400,
+    "POG2": 420,
+    "POE": 500,
 }
 
 
@@ -170,8 +230,15 @@ def _parse_med_field_name(name):
 
 
 def _write_field_step(
-    field_grp, step_name, ndt, nor, pdt, supp, data,
-    med_type=None, profile="MED_NO_PROFILE_INTERNAL",
+    field_grp,
+    step_name,
+    ndt,
+    nor,
+    pdt,
+    supp,
+    data,
+    med_type=None,
+    profile="MED_NO_PROFILE_INTERNAL",
 ):
     """Write a single time step into a MED field group."""
     if step_name not in field_grp:
@@ -213,16 +280,14 @@ def _ensure_med_families(mesh):
     A node / cell may belong to SEVERAL groups: one family is created
     per unique combination of group names (intersection handling).
     """
-    # Already converted (MED → MED round-trip): nothing to do 
+    # Already converted (MED → MED round-trip): nothing to do
     has_point_tags = (
         hasattr(mesh, "point_tags")
         and mesh.point_tags
         and "point_tags" in mesh.point_data
     )
     has_cell_tags = (
-        hasattr(mesh, "cell_tags")
-        and mesh.cell_tags
-        and "cell_tags" in mesh.cell_data
+        hasattr(mesh, "cell_tags") and mesh.cell_tags and "cell_tags" in mesh.cell_data
     )
     if has_point_tags and has_cell_tags:
         return mesh
@@ -281,9 +346,7 @@ def _ensure_med_families(mesh):
         n_blocks = len(mesh.cells)
 
         # One family-id array per cell block, initialised to 0
-        cell_fam_arrays = [
-            np.zeros(len(cb.data), dtype=np.int32) for cb in mesh.cells
-        ]
+        cell_fam_arrays = [np.zeros(len(cb.data), dtype=np.int32) for cb in mesh.cells]
 
         # Accumulate group names per (block_idx, local_cell_idx)
         cell_groups_map: list[list[set]] = [
@@ -344,9 +407,7 @@ def _ensure_med_families(mesh):
                     sorted_names = sorted(combo)
                     cell_tags[fid] = sorted_names
                     cell_tag_groups[fid] = f"FAM_{fid}"  # nom de lien court et MED-safe
-                cell_fam_arrays[block_idx][local_i] = (
-                    combo_to_fam_cell[combo]
-                )
+                cell_fam_arrays[block_idx][local_i] = combo_to_fam_cell[combo]
 
         cell_data["cell_tags"] = cell_fam_arrays
 
@@ -414,9 +475,7 @@ def _read_cells(med_cells):
         if med_cell_type in ("POG", "POG2"):  # polygonal cells with variable node count
             nod = med_cell_type_group["NOD"][()] - 1
             inn = med_cell_type_group["INN"][()]
-            polygons = [
-                nod[inn[i] - 1 : inn[i + 1] - 1] for i in range(len(inn) - 1)
-            ]
+            polygons = [nod[inn[i] - 1 : inn[i + 1] - 1] for i in range(len(inn) - 1)]
             cells.append((cell_type, polygons))
         else:
             nod = med_cell_type_group["NOD"]
@@ -449,7 +508,7 @@ def read(filename):
     mesh_name = list(meshes)[0]
     mesh = mesh_ensemble[mesh_name]
     mesh_description = _med_str(mesh.attrs.get("DES", b"")).strip().rstrip("\x00")
-    mesh_unit_time   = _med_str(mesh.attrs.get("UNT", b"")).strip().rstrip("\x00")
+    mesh_unit_time = _med_str(mesh.attrs.get("UNT", b"")).strip().rstrip("\x00")
     mesh_unit_coords = _med_str(mesh.attrs.get("UNI", b"")).strip().rstrip("\x00")
 
     dim = mesh.attrs["ESP"]
@@ -483,12 +542,14 @@ def read(filename):
     # Information for point tags
     point_tags = {}
     point_tag_groups = {}
-    if "FAS" in mesh:        # first check for FAS in the mesh, then in the root group, since some MED files have FAS only in the root group
+    if (
+        "FAS" in mesh
+    ):  # first check for FAS in the mesh, then in the root group, since some MED files have FAS only in the root group
         fas = mesh["FAS"]
     elif "FAS" in f and mesh_name in f["FAS"]:
         fas = f["FAS"][mesh_name]
     else:
-        fas = None           # if FAS is not found, point_tags will be empty and the mesh.point_tags attribute will be an empty dict
+        fas = None  # if FAS is not found, point_tags will be empty and the mesh.point_tags attribute will be an empty dict
     if fas is not None and "NOEUD" in fas:
         point_tags, point_tag_groups = _read_families(fas["NOEUD"])
 
@@ -512,9 +573,11 @@ def read(filename):
         profiles = f["PROFILS"] if "PROFILS" in f else None
         _read_data(fields, profiles, cell_types, point_data, cell_data, field_data)
 
-    # Reconstruct point_sets / cell_sets from MED families 
+    # Reconstruct point_sets / cell_sets from MED families
     point_sets = _families_to_point_sets(point_tags, point_data.get("point_tags"))
-    cell_sets  = _families_to_cell_sets(cell_tags, cell_data.get("cell_tags"), len(cells))
+    cell_sets = _families_to_cell_sets(
+        cell_tags, cell_data.get("cell_tags"), len(cells)
+    )
 
     # Construct the mesh object
     mesh = Mesh(
@@ -528,9 +591,9 @@ def read(filename):
     )
     mesh.point_tags = point_tags
     mesh.cell_tags = cell_tags
-    mesh.mesh_name   = mesh_name
+    mesh.mesh_name = mesh_name
     mesh.description = mesh_description
-    mesh.unit_time   = mesh_unit_time
+    mesh.unit_time = mesh_unit_time
     mesh.unit_coords = mesh_unit_coords
     mesh.point_tag_groups = point_tag_groups
     mesh.cell_tag_groups = cell_tag_groups
@@ -620,23 +683,27 @@ def _read_data(fields, profiles, cell_types, point_data, cell_data, field_data):
             names = [name]
             key = time_step[0]
             med_data = data[key]
-            field_data["med:step_meta"][name].append({
-                "ndt": med_data.attrs.get("NDT", 0),
-                "nor": med_data.attrs.get("NOR", -1),
-                "pdt": med_data.attrs["PDT"],
-                "key": key,
-            })
+            field_data["med:step_meta"][name].append(
+                {
+                    "ndt": med_data.attrs.get("NDT", 0),
+                    "nor": med_data.attrs.get("NOR", -1),
+                    "pdt": med_data.attrs["PDT"],
+                    "key": key,
+                }
+            )
         else:
             names = []
             for i, key in enumerate(time_step):
                 med_data = data[key]
                 t = med_data.attrs["PDT"]
-                field_data["med:step_meta"][name].append({
-                    "ndt": med_data.attrs.get("NDT", i),
-                    "nor": med_data.attrs.get("NOR", -1),
-                    "pdt": t,
-                    "key": key,
-                })
+                field_data["med:step_meta"][name].append(
+                    {
+                        "ndt": med_data.attrs.get("NDT", i),
+                        "nor": med_data.attrs.get("NOR", -1),
+                        "pdt": t,
+                        "key": key,
+                    }
+                )
                 names.append(name + f"[{i:d}] - {t:g}")
 
         for i, key in enumerate(time_step):
@@ -654,6 +721,7 @@ def _read_data(fields, profiles, cell_types, point_data, cell_data, field_data):
                     cell_data[name_i][cell_index] = _read_cell_data(
                         med_data[supp], profiles
                     )
+
 
 def _read_nodal_data(med_data, profiles):
     profile = med_data["NOE"].attrs["PFL"]
@@ -750,13 +818,17 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
     med_mesh.attrs.create("DIM", mesh.points.shape[1])  # mesh dimension
     med_mesh.attrs.create("ESP", mesh.points.shape[1])  # spatial dimension
     med_mesh.attrs.create("REP", 0)  # cartesian coordinate system (repère in French)
-    unt  = getattr(mesh, "unit_time", "")
-    uni  = getattr(mesh, "unit_coords", "")
+    unt = getattr(mesh, "unit_time", "")
+    uni = getattr(mesh, "unit_coords", "")
     desc = getattr(mesh, "description", None)
     if not desc:
         desc = "Mesh created with meshlane"
-    med_mesh.attrs.create("UNT", np.bytes_(unt.encode("utf-8")) if unt else numpy_void_str)
-    med_mesh.attrs.create("UNI", np.bytes_(uni.encode("utf-8")) if uni else numpy_void_str)
+    med_mesh.attrs.create(
+        "UNT", np.bytes_(unt.encode("utf-8")) if unt else numpy_void_str
+    )
+    med_mesh.attrs.create(
+        "UNI", np.bytes_(uni.encode("utf-8")) if uni else numpy_void_str
+    )
     med_mesh.attrs.create("SRT", 1)  # sorting type MED_SORT_ITDT
     # component names:
     names = ["X", "Y", "Z"][: mesh.points.shape[1]]
@@ -812,8 +884,8 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
     # internal face is shared by its two cells with opposite winding, which MED
     # readers (code_saturne, Salome, code_aster,...) require.
     prepared = {}
-    orient_blocks = []   # 3D cells fed to the orientation pass
-    orient_keys = []     # bucket key per orientation block (to map masks back)
+    orient_blocks = []  # 3D cells fed to the orientation pass
+    orient_keys = []  # bucket key per orientation block (to map masks back)
     for cell_type, cells_list in cells_by_type.items():
         if cell_type == "polyhedron":
             all_polys = [poly for arr in cells_list for poly in arr]
@@ -932,22 +1004,24 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
     try:
         if len(mesh.point_tags) > 0:
             node = families.create_group("NOEUD", track_order=True)
-            _write_families(node, mesh.point_tags, getattr(mesh, "point_tag_groups", {}))
+            _write_families(
+                node, mesh.point_tags, getattr(mesh, "point_tag_groups", {})
+            )
     except AttributeError:
         pass
 
     try:
         if len(mesh.cell_tags) > 0:
             element = families.create_group("ELEME", track_order=True)
-            _write_families(element, mesh.cell_tags, getattr(mesh, "cell_tag_groups", {}))
+            _write_families(
+                element, mesh.cell_tags, getattr(mesh, "cell_tag_groups", {})
+            )
     except AttributeError:
         pass
 
     # Fields (CHA group)
     has_point_data = any(k != "point_tags" for k in mesh.point_data)
-    has_cell_data = any(
-        k not in ("cell_tags", "gmsh:physical") for k in mesh.cell_data
-    )
+    has_cell_data = any(k not in ("cell_tags", "gmsh:physical") for k in mesh.cell_data)
 
     if not has_point_data and not has_cell_data:
         f.close()
@@ -959,7 +1033,7 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
     field_units = mesh.field_data.get("med:field_units", {})
     name_idx = 0
 
-    # Nodal fields 
+    # Nodal fields
     nodal_groups = defaultdict(list)
     for name, data in mesh.point_data.items():
         if name == "point_tags":
@@ -1044,7 +1118,9 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
 
     for base_name, entries in cell_groups.items():
         entries.sort(key=lambda x: x[0] if x[0] is not None else 0)
-        comp_name = field_comp_names[name_idx] if name_idx < len(field_comp_names) else None
+        comp_name = (
+            field_comp_names[name_idx] if name_idx < len(field_comp_names) else None
+        )
         name_idx += 1
 
         first_data = entries[0][3]
@@ -1053,7 +1129,9 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
         try:
             field = fields.create_group(base_name)
             field.attrs.create("MAI", np.bytes_(mesh_name))
-            field.attrs.create("TYP", numpy_to_med_type.get(first_data.dtype, MED_FLOAT64))
+            field.attrs.create(
+                "TYP", numpy_to_med_type.get(first_data.dtype, MED_FLOAT64)
+            )
             field.attrs.create("NCO", n_components)
             field.attrs.create("UNI", numpy_void_str)
             field.attrs.create("UNT", numpy_void_str)
@@ -1111,11 +1189,14 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
             profile_grp.attrs.create("GAU", numpy_void_str)
             profile_grp.create_dataset("CO", data=data.flatten(order="F"))
 
-            tracker.notify("MED_CELL", med_to_geo_type.get(med_type, med_type), step_name)
+            tracker.notify(
+                "MED_CELL", med_to_geo_type.get(med_type, med_type), step_name
+            )
 
         tracker.flush(field)
 
     f.close()
+
 
 def _write_data(
     fields,

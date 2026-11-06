@@ -1,17 +1,17 @@
+import copy
 import pathlib
 
 import numpy as np
-import pytest 
-import copy
+import pytest
 
 import meshlane
 from meshlane.med._med import numpy_to_med_type
 from meshlane.med._med41 import (
     FieldBitmaskWriter,
-    decode_entity_mask,
-    decode_geo_mask,
     _bit_set,
     _bit_test,
+    decode_entity_mask,
+    decode_geo_mask,
 )
 
 from . import helpers
@@ -41,7 +41,6 @@ h5py = pytest.importorskip("h5py")
         helpers.add_cell_data(helpers.tri_mesh, [("a", (), np.float64)]),
         helpers.add_cell_data(helpers.tri_mesh, [("a", (2,), np.float64)]),
         helpers.add_cell_data(helpers.tri_mesh, [("a", (3,), np.float64)]),
-        
     ],
 )
 def test_io(mesh, tmp_path):
@@ -143,7 +142,6 @@ def test_reference_file_with_point_cell_data(tmp_path):
     helpers.write_read(tmp_path, meshlane.med.write, meshlane.med.read, mesh, 1.0e-15)
 
 
-
 def test_read_med_without_fas(tmp_path):
     """Un fichier MED sans section FAS ne doit pas crasher."""
     filename = tmp_path / "no_fas.med"
@@ -233,14 +231,16 @@ def test_write_multi_blocks_same_type_with_cell_data(tmp_path):
     """Multiple blocks of the same type with cell_data must be merged."""
     from meshlane._mesh import CellBlock
 
-    points = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [0.0, 1.0],
-        [1.0, 1.0],
-        [2.0, 0.0],
-        [2.0, 1.0],
-    ])
+    points = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+            [2.0, 0.0],
+            [2.0, 1.0],
+        ]
+    )
 
     cells = [
         CellBlock("triangle", np.array([[0, 1, 2], [1, 3, 2]])),
@@ -261,17 +261,18 @@ def test_write_multi_blocks_same_type_with_cell_data(tmp_path):
 
     # Re-read: triangles are merged into 1 block
     mesh_out = meshlane.med.read(filename)
-    total_tri = sum(
-        len(c.data) for c in mesh_out.cells if c.type == "triangle"
-    )
+    total_tri = sum(len(c.data) for c in mesh_out.cells if c.type == "triangle")
     assert total_tri == 4
 
     # Cell tags must be merged in the correct order
     assert "cell_tags" in mesh_out.cell_data
-    tags = np.concatenate([
-        t for c, t in zip(mesh_out.cells, mesh_out.cell_data["cell_tags"])
-        if c.type == "triangle"
-    ])
+    tags = np.concatenate(
+        [
+            t
+            for c, t in zip(mesh_out.cells, mesh_out.cell_data["cell_tags"])
+            if c.type == "triangle"
+        ]
+    )
     assert np.array_equal(tags, np.array([-1, -1, -2, -2]))
 
 
@@ -281,12 +282,14 @@ def test_read_med_partial_cell_data(tmp_path):
 
     from meshlane._mesh import CellBlock
 
-    points = np.array([
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0],
-    ])
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
 
     cells = [
         CellBlock("triangle", np.array([[0, 1, 2]])),
@@ -333,26 +336,26 @@ def test_read_med_partial_cell_data(tmp_path):
     # Field must exist on tetra, None on triangle
     assert "test_field" in mesh_out.cell_data
     field_data = mesh_out.cell_data["test_field"]
-    tetra_idx = next(
-        i for i, c in enumerate(mesh_out.cells) if c.type == "tetra"
-    )
+    tetra_idx = next(i for i, c in enumerate(mesh_out.cells) if c.type == "tetra")
     assert field_data[tetra_idx] is not None
     assert np.isclose(field_data[tetra_idx].flat[0], 42.0)
 
 
-@pytest.mark.parametrize("dtype, expected_med_type", [
-    (np.float32, 4),   # MED_FLOAT32
-    (np.float64, 6),   # MED_FLOAT64
-    (np.int32,   24),  # MED_INT32
-    (np.int64,   26),  # MED_INT64
-])
+@pytest.mark.parametrize(
+    "dtype, expected_med_type",
+    [
+        (np.float32, 4),  # MED_FLOAT32
+        (np.float64, 6),  # MED_FLOAT64
+        (np.int32, 24),  # MED_INT32
+        (np.int64, 26),  # MED_INT64
+    ],
+)
 def test_med_type_mapping(dtype, expected_med_type):
     """Check that numpy dtype maps to the correct MED type constant."""
     data = np.array([1, 2, 3], dtype=dtype)
     result = numpy_to_med_type[data.dtype]
     assert result == expected_med_type, (
-        f"dtype={dtype.__name__}: "
-        f"expected {expected_med_type}, got {result}"
+        f"dtype={dtype.__name__}: " f"expected {expected_med_type}, got {result}"
     )
 
 
@@ -363,12 +366,15 @@ def test_med_type_mapping_unknown_dtype():
         _ = numpy_to_med_type[data.dtype]
 
 
-@pytest.mark.parametrize("dtype, expected_med_type", [
-    (np.float32, 4),   # MED_FLOAT32
-    (np.float64, 6),   # MED_FLOAT64
-    (np.int32,   24),  # MED_INT32
-    (np.int64,   26),  # MED_INT64
-])
+@pytest.mark.parametrize(
+    "dtype, expected_med_type",
+    [
+        (np.float32, 4),  # MED_FLOAT32
+        (np.float64, 6),  # MED_FLOAT64
+        (np.int32, 24),  # MED_INT32
+        (np.int64, 26),  # MED_INT64
+    ],
+)
 def test_med_type_preserved_after_write_read(tmp_path, dtype, expected_med_type):
     """
     Check that TYP written in HDF5 matches the expected MED type
@@ -393,11 +399,14 @@ def test_med_type_preserved_after_write_read(tmp_path, dtype, expected_med_type)
                     )
 
 
-@pytest.mark.parametrize("med_version, expected", [
-    ("4.1.0", (4, 1, 0)),
-    ("4.0.0", (4, 0, 0)),
-    ("3.0.0", (3, 0, 0)),
-])
+@pytest.mark.parametrize(
+    "med_version, expected",
+    [
+        ("4.1.0", (4, 1, 0)),
+        ("4.0.0", (4, 0, 0)),
+        ("3.0.0", (3, 0, 0)),
+    ],
+)
 def test_med_version_written(tmp_path, med_version, expected):
     """Check that the specified MED version is written to the HDF5 file."""
     filename = tmp_path / f"test_v{med_version}.med"
@@ -567,19 +576,19 @@ def test_bitmask_written_in_real_med_file(tmp_path):
         for field_name in f["CHA"]:
             field_grp = f["CHA"][field_name]
 
-            assert "LEN" in field_grp.attrs, (
-                f"Field '{field_name}': LEN attribute missing"
-            )
+            assert (
+                "LEN" in field_grp.attrs
+            ), f"Field '{field_name}': LEN attribute missing"
 
-            assert "LAA" in field_grp.attrs, (
-                f"Field '{field_name}': LAA attribute missing"
-            )
+            assert (
+                "LAA" in field_grp.attrs
+            ), f"Field '{field_name}': LAA attribute missing"
 
             # LEN mask must have MED_NODE (bit 3) set
             len_mask = np.uint32(int(field_grp.attrs["LEN"]))
-            assert _bit_test(len_mask, 3), (
-                f"Field '{field_name}': MED_NODE bit not set in LEN"
-            )
+            assert _bit_test(
+                len_mask, 3
+            ), f"Field '{field_name}': MED_NODE bit not set in LEN"
 
 
 def test_polygonal_cells():
@@ -731,14 +740,17 @@ def test_empty_family_has_no_gro(tmp_path):
     """
     from meshlane._mesh import CellBlock, Mesh
 
-    points = np.array([
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-    ])
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ]
+    )
     cells = [CellBlock("triangle", np.array([[0, 1, 2]]))]
     mesh = Mesh(
-        points, cells,
+        points,
+        cells,
         point_data={"point_tags": np.array([0, 0, 0])},
     )
     mesh.point_tags = {-1: []}  # family with no names
@@ -763,17 +775,20 @@ def test_family_name_too_long_raises_write_error(tmp_path):
     """
     A family name > 80 bytes must raise a WriteError.
     """
-    from meshlane._mesh import CellBlock, Mesh
     from meshlane._exceptions import WriteError
+    from meshlane._mesh import CellBlock, Mesh
 
-    points = np.array([
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-    ])
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ]
+    )
     cells = [CellBlock("triangle", np.array([[0, 1, 2]]))]
     mesh = Mesh(
-        points, cells,
+        points,
+        cells,
         point_data={"point_tags": np.array([-1, -1, -1])},
     )
     mesh.point_tags = {-1: ["A" * 81]}  # 81 characters > 80
@@ -793,15 +808,15 @@ def test_metadata_defaults_roundtrip(tmp_path):
     """
     filename = tmp_path / "defaults.med"
     meshlane.med.write(filename, helpers.tri_mesh)  # not mutated -> no deepcopy
- 
+
     out = meshlane.med.read(filename)
- 
+
     assert out.mesh_name == "mesh"
     assert out.description == "Mesh created with meshlane"
     assert out.unit_time == ""
     assert out.unit_coords == ""
- 
- 
+
+
 @pytest.mark.parametrize(
     "attr, med_key, value",
     [
@@ -818,23 +833,23 @@ def test_metadata_custom_roundtrip(tmp_path, attr, med_key, value):
     """
     f1 = tmp_path / "custom_a.med"
     f2 = tmp_path / "custom_b.med"
- 
+
     mesh = copy.deepcopy(helpers.tri_mesh)
     setattr(mesh, attr, value)
     meshlane.med.write(f1, mesh)
- 
+
     # Read side: the attribute is reconstructed on the Mesh object.
     out = meshlane.med.read(f1)
     assert getattr(out, attr) == value
- 
+
     # Write side: the value must be written back, not overwritten by a default.
     meshlane.med.write(f2, out)
     with h5py.File(f2, "r") as f:
         name = next(iter(f["ENS_MAA"]))
         stored = f["ENS_MAA"][name].attrs[med_key].decode().rstrip("\x00")
         assert stored == value
- 
- 
+
+
 def test_mesh_name_roundtrip(tmp_path):
     """The mesh name is stored as the ENS_MAA group key (not as an attribute),
     so it has its own code path and gets its own test. Setting `mesh_name` and
@@ -844,22 +859,22 @@ def test_mesh_name_roundtrip(tmp_path):
     """
     f1 = tmp_path / "name_a.med"
     f2 = tmp_path / "name_b.med"
- 
+
     mesh = copy.deepcopy(helpers.tri_mesh)
     mesh.mesh_name = "my_custom_mesh"
     meshlane.med.write(f1, mesh)
- 
+
     out = meshlane.med.read(f1)
     assert out.mesh_name == "my_custom_mesh"
- 
+
     # The custom name must be preserved on the next write, and the default
     # name "mesh" must not reappear.
     meshlane.med.write(f2, out)
     with h5py.File(f2, "r") as f:
         assert "my_custom_mesh" in f["ENS_MAA"]
         assert "mesh" not in f["ENS_MAA"]
- 
- 
+
+
 def test_read_strips_surrounding_whitespace(tmp_path):
     """MED files written by other tools (e.g. Salome) may pad fixed-width
     string fields. This justifies the `.strip()` cleanup in read(). We inject
@@ -869,11 +884,11 @@ def test_read_strips_surrounding_whitespace(tmp_path):
     """
     filename = tmp_path / "padded.med"
     meshlane.med.write(filename, helpers.tri_mesh)
- 
+
     with h5py.File(filename, "a") as f:
         name = next(iter(f["ENS_MAA"]))
         f["ENS_MAA"][name].attrs["DES"] = np.bytes_("   Salome mesh   ")
- 
+
     out = meshlane.med.read(filename)
     assert out.description == "Salome mesh"
 
@@ -885,12 +900,12 @@ def test_point_tag_groups_attribute_exists_after_read():
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "med" / "cylinder.med"
     mesh_out = meshlane.med.read(filename)
-    assert hasattr(mesh_out, "point_tag_groups"), (
-        "The Mesh must have the point_tag_groups attribute"
-    )
-    assert isinstance(mesh_out.point_tag_groups, dict), (
-        "point_tag_groups must be a dict"
-    )
+    assert hasattr(
+        mesh_out, "point_tag_groups"
+    ), "The Mesh must have the point_tag_groups attribute"
+    assert isinstance(
+        mesh_out.point_tag_groups, dict
+    ), "point_tag_groups must be a dict"
 
 
 def test_cell_tag_groups_attribute_exists_after_read():
@@ -900,12 +915,10 @@ def test_cell_tag_groups_attribute_exists_after_read():
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "med" / "cylinder.med"
     mesh_out = meshlane.med.read(filename)
-    assert hasattr(mesh_out, "cell_tag_groups"), (
-        "The Mesh must have the cell_tag_groups attribute"
-    )
-    assert isinstance(mesh_out.cell_tag_groups, dict), (
-        "cell_tag_groups must be a dict"
-    )
+    assert hasattr(
+        mesh_out, "cell_tag_groups"
+    ), "The Mesh must have the cell_tag_groups attribute"
+    assert isinstance(mesh_out.cell_tag_groups, dict), "cell_tag_groups must be a dict"
 
 
 def test_parse_med_field_name_single():
@@ -940,15 +953,20 @@ def test_multi_timestep_grouped_under_single_hdf5_field(tmp_path):
     sous un seul groupe HDF5 dans CHA, pas comme des champs séparés.
     Sans PR16, chaque 'Temperature[i] - t' créait un groupe séparé.
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
-    points = np.array([
-        [0.0, 0.0, 0.0], [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0], [1.0, 1.0, 0.0],
-    ])
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 1.0, 0.0],
+        ]
+    )
     cells = [CellBlock("triangle", np.array([[0, 1, 2], [1, 3, 2]]))]
     mesh = Mesh(
-        points, cells,
+        points,
+        cells,
         point_data={
             "Temperature[0] - 0.0": np.array([1.0, 2.0, 3.0, 4.0]),
             "Temperature[1] - 1.0": np.array([5.0, 6.0, 7.0, 8.0]),
@@ -961,18 +979,18 @@ def test_multi_timestep_grouped_under_single_hdf5_field(tmp_path):
         assert "CHA" in f, "Le groupe CHA doit exister"
         cha_keys = list(f["CHA"].keys())
 
-        assert "Temperature" in cha_keys, (
-            "Les timesteps doivent être regroupés sous 'Temperature'"
-        )
-        assert "Temperature[0] - 0.0" not in cha_keys, (
-            "Le nom avec [0] ne doit pas être un champ séparé"
-        )
-        assert "Temperature[1] - 1.0" not in cha_keys, (
-            "Le nom avec [1] ne doit pas être un champ séparé"
-        )
-        assert len(f["CHA"]["Temperature"].keys()) == 2, (
-            "Il doit y avoir exactement 2 sous-groupes de timestep"
-        )
+        assert (
+            "Temperature" in cha_keys
+        ), "Les timesteps doivent être regroupés sous 'Temperature'"
+        assert (
+            "Temperature[0] - 0.0" not in cha_keys
+        ), "Le nom avec [0] ne doit pas être un champ séparé"
+        assert (
+            "Temperature[1] - 1.0" not in cha_keys
+        ), "Le nom avec [1] ne doit pas être un champ séparé"
+        assert (
+            len(f["CHA"]["Temperature"].keys()) == 2
+        ), "Il doit y avoir exactement 2 sous-groupes de timestep"
 
 
 def test_no_cha_group_when_no_fields(tmp_path):
@@ -985,9 +1003,9 @@ def test_no_cha_group_when_no_fields(tmp_path):
     meshlane.med.write(filename, mesh)
 
     with h5py.File(filename, "r") as f:
-        assert "CHA" not in f, (
-            "Le groupe CHA ne doit pas exister quand il n'y a pas de champs"
-        )
+        assert (
+            "CHA" not in f
+        ), "Le groupe CHA ne doit pas exister quand il n'y a pas de champs"
 
 
 def test_multi_timestep_roundtrip_box(tmp_path):
@@ -1008,9 +1026,9 @@ def test_multi_timestep_roundtrip_box(tmp_path):
     for key in mesh_out.point_data:
         if key == "point_tags":
             continue
-        assert key in mesh_rt.point_data, (
-            f"Le champ nodal '{key}' doit être présent après round-trip"
-        )
+        assert (
+            key in mesh_rt.point_data
+        ), f"Le champ nodal '{key}' doit être présent après round-trip"
         assert np.allclose(
             mesh_out.point_data[key],
             mesh_rt.point_data[key],
@@ -1036,16 +1054,16 @@ def test_field_units_preserved_after_read(tmp_path):
 
     mesh_out = meshlane.med.read(filename)
 
-    assert "med:field_units" in mesh_out.field_data, (
-        "field_data must contain 'med:field_units' after read"
-    )
+    assert (
+        "med:field_units" in mesh_out.field_data
+    ), "field_data must contain 'med:field_units' after read"
     for field_name, (uni, unt) in mesh_out.field_data["med:field_units"].items():
-        assert uni == np.bytes_("Pa"), (
-            f"UNI of field '{field_name}': expected b'Pa', got {uni}"
-        )
-        assert unt == np.bytes_("s"), (
-            f"UNT of field '{field_name}': expected b's', got {unt}"
-        )
+        assert uni == np.bytes_(
+            "Pa"
+        ), f"UNI of field '{field_name}': expected b'Pa', got {uni}"
+        assert unt == np.bytes_(
+            "s"
+        ), f"UNT of field '{field_name}': expected b's', got {unt}"
 
 
 def test_field_units_roundtrip(tmp_path):
@@ -1069,12 +1087,12 @@ def test_field_units_roundtrip(tmp_path):
 
     with h5py.File(filename2, "r") as f:
         for field_name in f["CHA"]:
-            assert f["CHA"][field_name].attrs["UNI"] == np.bytes_("MPa"), (
-                f"UNI of field '{field_name}' must be preserved after round-trip"
-            )
-            assert f["CHA"][field_name].attrs["UNT"] == np.bytes_("s"), (
-                f"UNT of field '{field_name}' must be preserved after round-trip"
-            )
+            assert f["CHA"][field_name].attrs["UNI"] == np.bytes_(
+                "MPa"
+            ), f"UNI of field '{field_name}' must be preserved after round-trip"
+            assert f["CHA"][field_name].attrs["UNT"] == np.bytes_(
+                "s"
+            ), f"UNT of field '{field_name}' must be preserved after round-trip"
 
 
 def test_step_metadata_preserved_after_read(tmp_path):
@@ -1097,17 +1115,15 @@ def test_step_metadata_preserved_after_read(tmp_path):
 
     mesh_out = meshlane.med.read(filename)
 
-    assert "med:step_meta" in mesh_out.field_data, (
-        "field_data must contain 'med:step_meta' after read"
-    )
+    assert (
+        "med:step_meta" in mesh_out.field_data
+    ), "field_data must contain 'med:step_meta' after read"
     for field_name, meta_list in mesh_out.field_data["med:step_meta"].items():
         assert len(meta_list) >= 1
         meta = meta_list[0]
         assert meta["ndt"] == 7, f"NDT expected 7, got {meta['ndt']}"
         assert meta["nor"] == 3, f"NOR expected 3, got {meta['nor']}"
-        assert meta["pdt"] == pytest.approx(2.5), (
-            f"PDT expected 2.5, got {meta['pdt']}"
-        )
+        assert meta["pdt"] == pytest.approx(2.5), f"PDT expected 2.5, got {meta['pdt']}"
 
 
 def test_step_metadata_roundtrip(tmp_path):
@@ -1137,9 +1153,9 @@ def test_step_metadata_roundtrip(tmp_path):
             ts = f["CHA"][field_name][ts_name]
             assert ts.attrs["NDT"] == 10, "NDT must be preserved after round-trip"
             assert ts.attrs["NOR"] == 5, "NOR must be preserved after round-trip"
-            assert ts.attrs["PDT"] == pytest.approx(3.14), (
-                "PDT must be preserved after round-trip"
-            )
+            assert ts.attrs["PDT"] == pytest.approx(
+                3.14
+            ), "PDT must be preserved after round-trip"
 
 
 def test_metadata_utf8_roundtrip(tmp_path):
@@ -1175,40 +1191,36 @@ def test_med_multi_write_read_two_meshes(tmp_path):
     write_med_multi must write two meshes and read_med_multi must
     return them with the correct number of points and cells.
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     mesh1 = Mesh(
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
         [CellBlock("triangle", np.array([[0, 1, 2]]))],
     )
     mesh2 = Mesh(
-        np.array([
-            [0.0, 0.0, 0.0], [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0], [1.0, 1.0, 0.0],
-        ]),
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [1.0, 1.0, 0.0],
+            ]
+        ),
         [CellBlock("triangle", np.array([[0, 1, 2], [1, 3, 2]]))],
     )
 
     filename = tmp_path / "two_meshes.med"
-    meshlane.med.write_med_multi(filename, [mesh1, mesh2], mesh_names=["mesh_a", "mesh_b"])
+    meshlane.med.write_med_multi(
+        filename, [mesh1, mesh2], mesh_names=["mesh_a", "mesh_b"]
+    )
 
     meshes, names = meshlane.med.read_med_multi(filename)
 
-    assert names == ["mesh_a", "mesh_b"], (
-        f"Mesh names must be preserved, got {names}"
-    )
-    assert len(meshes[0].points) == 3, (
-        "mesh_a must have 3 points"
-    )
-    assert len(meshes[1].points) == 4, (
-        "mesh_b must have 4 points"
-    )
-    assert len(meshes[0].cells[0].data) == 1, (
-        "mesh_a must have 1 triangle"
-    )
-    assert len(meshes[1].cells[0].data) == 2, (
-        "mesh_b must have 2 triangles"
-    )
+    assert names == ["mesh_a", "mesh_b"], f"Mesh names must be preserved, got {names}"
+    assert len(meshes[0].points) == 3, "mesh_a must have 3 points"
+    assert len(meshes[1].points) == 4, "mesh_b must have 4 points"
+    assert len(meshes[0].cells[0].data) == 1, "mesh_a must have 1 triangle"
+    assert len(meshes[1].cells[0].data) == 2, "mesh_b must have 2 triangles"
 
 
 def test_med_multi_preserves_groups(tmp_path):
@@ -1217,7 +1229,7 @@ def test_med_multi_preserves_groups(tmp_path):
     like the single-mesh reader. Regression: the CLI convert path uses
     read_med_multi, and previously dropped all groups (issues #25/#29).
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     mesh = Mesh(
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]),
@@ -1239,7 +1251,7 @@ def test_med_multi_default_mesh_names(tmp_path):
     """
     Without explicit mesh_names, meshes must be named mesh_0, mesh_1, etc.
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     mesh1 = Mesh(
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -1264,7 +1276,7 @@ def test_med_multi_field_collision_disambiguated(tmp_path):
     must be disambiguated with @<mesh_name> suffix.
     On read-back, the field name must be the original (without @).
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     mesh1 = Mesh(
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -1283,34 +1295,34 @@ def test_med_multi_field_collision_disambiguated(tmp_path):
     # HDF5 must use @suffix for collision
     with h5py.File(filename, "r") as f:
         cha_keys = list(f["CHA"].keys())
-        assert "pressure" in cha_keys or "pressure@m1" in cha_keys, (
-            f"Expected 'pressure' or 'pressure@m1' in CHA, got {cha_keys}"
-        )
-        assert "pressure@m2" in cha_keys, (
-            f"Expected 'pressure@m2' in CHA, got {cha_keys}"
-        )
+        assert (
+            "pressure" in cha_keys or "pressure@m1" in cha_keys
+        ), f"Expected 'pressure' or 'pressure@m1' in CHA, got {cha_keys}"
+        assert (
+            "pressure@m2" in cha_keys
+        ), f"Expected 'pressure@m2' in CHA, got {cha_keys}"
 
     # Read-back must restore original field name without @
     meshes, names = meshlane.med.read_med_multi(filename)
-    assert "pressure" in meshes[0].point_data, (
-        "Field 'pressure' must be restored without @ suffix on read"
-    )
-    assert "pressure" in meshes[1].point_data, (
-        "Field 'pressure' must be restored without @ suffix on read"
-    )
-    assert not any("@" in k for k in meshes[0].point_data), (
-        "No @ suffix must appear in point_data keys after read"
-    )
-    assert not any("@" in k for k in meshes[1].point_data), (
-        "No @ suffix must appear in point_data keys after read"
-    )
+    assert (
+        "pressure" in meshes[0].point_data
+    ), "Field 'pressure' must be restored without @ suffix on read"
+    assert (
+        "pressure" in meshes[1].point_data
+    ), "Field 'pressure' must be restored without @ suffix on read"
+    assert not any(
+        "@" in k for k in meshes[0].point_data
+    ), "No @ suffix must appear in point_data keys after read"
+    assert not any(
+        "@" in k for k in meshes[1].point_data
+    ), "No @ suffix must appear in point_data keys after read"
 
 
 def test_med_multi_no_field_collision(tmp_path):
     """
     When two meshes have different field names, no @ suffix must be used.
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     mesh1 = Mesh(
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -1328,22 +1340,22 @@ def test_med_multi_no_field_collision(tmp_path):
 
     with h5py.File(filename, "r") as f:
         cha_keys = list(f["CHA"].keys())
-        assert "temperature" in cha_keys, (
-            "Field 'temperature' must not be renamed when no collision"
-        )
-        assert "pressure" in cha_keys, (
-            "Field 'pressure' must not be renamed when no collision"
-        )
-        assert not any("@" in k for k in cha_keys), (
-            f"No @ suffix expected when no collision, got {cha_keys}"
-        )
+        assert (
+            "temperature" in cha_keys
+        ), "Field 'temperature' must not be renamed when no collision"
+        assert (
+            "pressure" in cha_keys
+        ), "Field 'pressure' must not be renamed when no collision"
+        assert not any(
+            "@" in k for k in cha_keys
+        ), f"No @ suffix expected when no collision, got {cha_keys}"
 
 
 def test_med_multi_points_preserved(tmp_path):
     """
     Point coordinates must be exactly preserved after a write/read round-trip.
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     pts1 = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
     pts2 = np.array([[2.0, 0.0, 0.0], [3.0, 0.0, 0.0], [2.0, 1.0, 0.0]])
@@ -1355,12 +1367,12 @@ def test_med_multi_points_preserved(tmp_path):
     meshlane.med.write_med_multi(filename, [mesh1, mesh2], mesh_names=["m1", "m2"])
 
     meshes, _ = meshlane.med.read_med_multi(filename)
-    assert np.allclose(meshes[0].points, pts1), (
-        "Points of mesh1 must be preserved after round-trip"
-    )
-    assert np.allclose(meshes[1].points, pts2), (
-        "Points of mesh2 must be preserved after round-trip"
-    )
+    assert np.allclose(
+        meshes[0].points, pts1
+    ), "Points of mesh1 must be preserved after round-trip"
+    assert np.allclose(
+        meshes[1].points, pts2
+    ), "Points of mesh2 must be preserved after round-trip"
 
 
 def test_med_multi_hdf5_structure(tmp_path):
@@ -1368,7 +1380,7 @@ def test_med_multi_hdf5_structure(tmp_path):
     The HDF5 file must contain ENS_MAA with all mesh names
     and FAS with one group per mesh.
     """
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     mesh1 = Mesh(
         np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -1412,13 +1424,25 @@ _MED_ORIENT_REF = {
     "hexahedron": (
         np.array(
             [
-                [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
-                [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1],
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+                [0, 1, 1],
             ],
             float,
         ),
-        [[0, 1, 2, 3], [4, 7, 6, 5], [0, 4, 5, 1],
-         [1, 5, 6, 2], [2, 6, 7, 3], [3, 7, 4, 0]],
+        [
+            [0, 1, 2, 3],
+            [4, 7, 6, 5],
+            [0, 4, 5, 1],
+            [1, 5, 6, 2],
+            [2, 6, 7, 3],
+            [3, 7, 4, 0],
+        ],
     ),
 }
 
@@ -1443,9 +1467,9 @@ def test_med_node_perm_matches_medcoupling_faces():
     from meshlane.med._med import _med_node_perm
 
     for cell_type, (pts, med_faces) in _MED_ORIENT_REF.items():
-        assert _all_med_faces_outward(pts, _med_node_perm[cell_type], med_faces), (
-            f"{cell_type}: MED faces not all outward after permutation"
-        )
+        assert _all_med_faces_outward(
+            pts, _med_node_perm[cell_type], med_faces
+        ), f"{cell_type}: MED faces not all outward after permutation"
 
 
 def test_identity_perm_is_not_med_orientation():
@@ -1464,12 +1488,18 @@ def test_med_multi_3d_orientation_and_roundtrip(tmp_path):
     """Multi-mesh MED: 3D cells are written in MED orientation, and the
     multi-mesh reader applies the inverse permutation so a write->read round-trip
     is identity. Exercises the multi-mesh write AND read directions."""
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     pts = np.array(
         [
-            [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
-            [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1],
+            [0, 0, 0],
+            [1, 0, 0],
+            [1, 1, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 0, 1],
+            [1, 1, 1],
+            [0, 1, 1],
         ],
         float,
     )
@@ -1483,8 +1513,10 @@ def test_med_multi_3d_orientation_and_roundtrip(tmp_path):
     # on-disk: hexes are in MED (negative-orientation) order for BOTH meshes
     def corner_jac(conn, P):
         return float(
-            np.dot(P[conn[1]] - P[conn[0]],
-                   np.cross(P[conn[3]] - P[conn[0]], P[conn[4]] - P[conn[0]]))
+            np.dot(
+                P[conn[1]] - P[conn[0]],
+                np.cross(P[conn[3]] - P[conn[0]], P[conn[4]] - P[conn[0]]),
+            )
         )
 
     with h5py.File(filename, "r") as f:
@@ -1508,11 +1540,9 @@ def test_gmsh_physical_groups_written_as_med_families(tmp_path):
     families/groups, otherwise a .msh -> .med conversion drops all groups.
     Here two blocks carry distinct physical ids and no names -> fallback
     "group_<id>" labels."""
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
-    pts = np.array(
-        [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]], float
-    )
+    pts = np.array([[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]], float)
     cells = [
         CellBlock("line", np.array([[0, 1], [1, 2]])),
         CellBlock("quad", np.array([[0, 1, 4, 3], [1, 2, 5, 4]])),
@@ -1536,7 +1566,7 @@ def test_gmsh_physical_groups_use_field_data_names(tmp_path):
     """When the .msh had $PhysicalNames, the readable group name comes from
     field_data ({name: [physical_id, dim]}) instead of the "group_<id>"
     fallback."""
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     pts = np.array([[0, 0], [1, 0], [0, 1]], float)
     cells = [CellBlock("triangle", np.array([[0, 1, 2]]))]
@@ -1560,7 +1590,7 @@ def test_gmsh_physical_and_cell_sets_both_preserved(tmp_path):
     physical id only in gmsh:physical. Both must survive to MED — the
     gmsh:physical bridge must not be skipped just because cell_sets is
     non-empty (and must not duplicate the already-named group)."""
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     pts = np.array([[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]], float)
     cells = [CellBlock("triangle", np.array([[0, 1, 3], [1, 2, 4], [2, 5, 4]]))]
@@ -1590,11 +1620,26 @@ def test_gmsh_physical_and_cell_sets_both_preserved(tmp_path):
 
 # unit cube written as a single polyhedron: 8 nodes, 6 outward-oriented quad faces
 _CUBE_PTS = np.array(
-    [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
-     [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], float,
+    [
+        [0, 0, 0],
+        [1, 0, 0],
+        [1, 1, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 1, 1],
+    ],
+    float,
 )
-_CUBE_FACES = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4],
-               [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
+_CUBE_FACES = [
+    [0, 3, 2, 1],
+    [4, 5, 6, 7],
+    [0, 1, 5, 4],
+    [1, 2, 6, 5],
+    [2, 3, 7, 6],
+    [3, 0, 4, 7],
+]
 
 
 def _polyhedron_block(polys):
@@ -1646,9 +1691,56 @@ def test_polyhedron_med_layout_matches_medcoupling(tmp_path):
     # reference values produced by MEDCoupling's MEDLoader for the same cells
     ref_ifn = [1, 7, 13]
     ref_inn = [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49]
-    ref_nod = [1, 4, 3, 2, 5, 6, 7, 8, 1, 2, 6, 5, 2, 3, 7, 6, 3, 4, 8, 7,
-               4, 1, 5, 8, 9, 12, 11, 10, 13, 14, 15, 16, 9, 10, 14, 13,
-               10, 11, 15, 14, 11, 12, 16, 15, 12, 9, 13, 16]
+    ref_nod = [
+        1,
+        4,
+        3,
+        2,
+        5,
+        6,
+        7,
+        8,
+        1,
+        2,
+        6,
+        5,
+        2,
+        3,
+        7,
+        6,
+        3,
+        4,
+        8,
+        7,
+        4,
+        1,
+        5,
+        8,
+        9,
+        12,
+        11,
+        10,
+        13,
+        14,
+        15,
+        16,
+        9,
+        10,
+        14,
+        13,
+        10,
+        11,
+        15,
+        14,
+        11,
+        12,
+        16,
+        15,
+        12,
+        9,
+        13,
+        16,
+    ]
     assert geo == 500
     np.testing.assert_array_equal(ifn, ref_ifn)
     np.testing.assert_array_equal(inn, ref_inn)
@@ -1658,7 +1750,7 @@ def test_polyhedron_med_layout_matches_medcoupling(tmp_path):
 def test_polyhedron_mixed_node_counts_split_on_read(tmp_path):
     """A POE group with polyhedra of different node counts is read back into
     separate polyhedron<N> blocks (meshlane convention)."""
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     # a tetra-as-polyhedron (4 nodes, 4 triangular faces) + a cube (8 nodes)
     tet_pts = np.array([[5, 0, 0], [6, 0, 0], [5, 1, 0], [5, 0, 1]], float)
@@ -1698,7 +1790,7 @@ def test_polyhedron_groups_roundtrip(tmp_path):
 def test_polygonN_fixed_block_written_to_med(tmp_path):
     """OpenFOAM-style polygon<N> blocks (fixed N, stored as a 2D array) are
     written to MED's POG group and read back with nodes preserved."""
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
 
     pts = np.array(
         [[0, 0, 0], [1, 0, 0], [1.5, 1, 0], [0.5, 1.5, 0], [-0.5, 1, 0]], float
@@ -1720,13 +1812,23 @@ def test_polygonN_fixed_block_written_to_med(tmp_path):
 
 # two hexes sharing the plane x=1, both valid VTK order
 _TWOHEX_PTS = np.array(
-    [[0, 0, 0], [1, 0, 0], [2, 0, 0],
-     [0, 1, 0], [1, 1, 0], [2, 1, 0],
-     [0, 0, 1], [1, 0, 1], [2, 0, 1],
-     [0, 1, 1], [1, 1, 1], [2, 1, 1]], float,
+    [
+        [0, 0, 0],
+        [1, 0, 0],
+        [2, 0, 0],
+        [0, 1, 0],
+        [1, 1, 0],
+        [2, 1, 0],
+        [0, 0, 1],
+        [1, 0, 1],
+        [2, 0, 1],
+        [0, 1, 1],
+        [1, 1, 1],
+        [2, 1, 1],
+    ],
+    float,
 )
-_TWOHEX = np.array([[0, 1, 4, 3, 6, 7, 10, 9],
-                    [1, 2, 5, 4, 7, 8, 11, 10]])
+_TWOHEX = np.array([[0, 1, 4, 3, 6, 7, 10, 9], [1, 2, 5, 4, 7, 8, 11, 10]])
 _HEX_FLIP = [0, 3, 2, 1, 4, 7, 6, 5]
 
 
@@ -1735,8 +1837,7 @@ def test_orient_flips_inconsistent_cell():
     exactly one cell to repair a deliberately inverted neighbour."""
     from meshlane.med import _orient
 
-    consistent = [{"kind": "regular", "type": "hexahedron",
-                   "conn": _TWOHEX.copy()}]
+    consistent = [{"kind": "regular", "type": "hexahedron", "conn": _TWOHEX.copy()}]
     assert _orient.consistent_orientation_flips(consistent, _TWOHEX_PTS) is None
 
     bad = _TWOHEX.copy()
@@ -1752,7 +1853,7 @@ def test_med_writer_produces_consistent_orientation(tmp_path):
     """A mesh with an inverted 3D cell is written to MED with globally
     consistent face orientation (every internal face shared with opposite
     winding), so MED readers like code_saturne accept it."""
-    from meshlane._mesh import Mesh, CellBlock
+    from meshlane._mesh import CellBlock, Mesh
     from meshlane.med import _orient
 
     conn = _TWOHEX.copy()
@@ -1786,6 +1887,7 @@ def test_med_geo_attribute(tmp_path):
     meshlane.med.write(p, helpers.tet10_mesh)
     geos = {}
     with h5py.File(p, "r") as f:
+
         def walk(g):
             for k in g:
                 it = g[k]
@@ -1793,6 +1895,7 @@ def test_med_geo_attribute(tmp_path):
                     geos[k] = int(it.attrs["GEO"])
                 if hasattr(it, "keys"):
                     walk(it)
+
         walk(f)
     assert geos.get("T10") == med_geo_code["T10"] == 310
 

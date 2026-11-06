@@ -7,6 +7,7 @@ the neutral pivot object meshlane.Mesh. No external dependencies nor passing
 through another format.
 
 """
+
 import re
 
 import numpy as np
@@ -28,22 +29,41 @@ for _n in (1, 3, 4, 21, 180, 188, 189, 288, 289):
     _FAMILY[_n] = "line"
 
 _TO_MESHIO = {
-    ("solid", 4): "tetra", ("solid", 10): "tetra10",
-    ("solid", 8): "hexahedron", ("solid", 20): "hexahedron20",
-    ("solid", 6): "wedge", ("solid", 15): "wedge15",
-    ("solid", 5): "pyramid", ("solid", 13): "pyramid13",
-    ("shell", 3): "triangle", ("shell", 6): "triangle6",
-    ("shell", 4): "quad", ("shell", 8): "quad8",
-    ("plane", 3): "triangle", ("plane", 6): "triangle6",
-    ("plane", 4): "quad", ("plane", 8): "quad8",
-    ("line", 2): "line", ("line", 3): "line3",
+    ("solid", 4): "tetra",
+    ("solid", 10): "tetra10",
+    ("solid", 8): "hexahedron",
+    ("solid", 20): "hexahedron20",
+    ("solid", 6): "wedge",
+    ("solid", 15): "wedge15",
+    ("solid", 5): "pyramid",
+    ("solid", 13): "pyramid13",
+    ("shell", 3): "triangle",
+    ("shell", 6): "triangle6",
+    ("shell", 4): "quad",
+    ("shell", 8): "quad8",
+    ("plane", 3): "triangle",
+    ("plane", 6): "triangle6",
+    ("plane", 4): "quad",
+    ("plane", 8): "quad8",
+    ("line", 2): "line",
+    ("line", 3): "line3",
 }
 
 _FROM_MESHIO = {
-    "tetra": 285, "tetra10": 187, "hexahedron": 185, "hexahedron20": 186,
-    "wedge": 185, "wedge15": 186, "pyramid": 185, "pyramid13": 186,
-    "triangle": 181, "triangle6": 281, "quad": 181, "quad8": 281,
-    "line": 188, "line3": 189,
+    "tetra": 285,
+    "tetra10": 187,
+    "hexahedron": 185,
+    "hexahedron20": 186,
+    "wedge": 185,
+    "wedge15": 186,
+    "pyramid": 185,
+    "pyramid13": 186,
+    "triangle": 181,
+    "triangle6": 281,
+    "quad": 181,
+    "quad8": 281,
+    "line": 188,
+    "line3": 189,
 }
 
 # 2D (plane) model: surface elements become PLANE182 (linear) / PLANE183 (quadratic),
@@ -51,8 +71,10 @@ _FROM_MESHIO = {
 # structural members of the analysis, so write() keeps their groups as node components
 # instead of writing the edges as elements.
 _FROM_MESHIO_PLANE = {
-    "triangle": 182, "triangle6": 183,
-    "quad": 182, "quad8": 183,
+    "triangle": 182,
+    "triangle6": 183,
+    "quad": 182,
+    "quad8": 183,
 }
 
 # PLANE183 KEYOPT(1) sets the shape: 1 = 6-node triangle, 0 = 8-node quad. Without
@@ -85,15 +107,52 @@ def _degenerate20(n):
     # verticals 16-19).
     top = n[4] == n[5] == n[6] == n[7]
     if top and n[2] == n[3]:
-        return "tetra10", [n[0], n[1], n[2], n[4],
-                           n[8], n[9], n[11], n[16], n[17], n[18]]
+        return "tetra10", [
+            n[0],
+            n[1],
+            n[2],
+            n[4],
+            n[8],
+            n[9],
+            n[11],
+            n[16],
+            n[17],
+            n[18],
+        ]
     if top:
-        return "pyramid13", [n[0], n[1], n[2], n[3], n[4],
-                             n[8], n[9], n[10], n[11], n[16], n[17], n[18], n[19]]
+        return "pyramid13", [
+            n[0],
+            n[1],
+            n[2],
+            n[3],
+            n[4],
+            n[8],
+            n[9],
+            n[10],
+            n[11],
+            n[16],
+            n[17],
+            n[18],
+            n[19],
+        ]
     if n[2] == n[3] and n[6] == n[7]:
-        return "wedge15", [n[0], n[1], n[2], n[4], n[5], n[6],
-                           n[8], n[9], n[11], n[12], n[13], n[15],
-                           n[16], n[17], n[18]]
+        return "wedge15", [
+            n[0],
+            n[1],
+            n[2],
+            n[4],
+            n[5],
+            n[6],
+            n[8],
+            n[9],
+            n[11],
+            n[12],
+            n[13],
+            n[15],
+            n[16],
+            n[17],
+            n[18],
+        ]
     return "hexahedron20", n
 
 
@@ -150,7 +209,7 @@ def _slice_ints(line, width):
     out = []
     line = line.rstrip("\n")
     for i in range(0, len(line), width):
-        chunk = line[i:i + width].strip()
+        chunk = line[i : i + width].strip()
         if chunk:
             try:
                 out.append(int(chunk))
@@ -163,28 +222,43 @@ def _slice_ints(line, width):
 def _slice_reals(s, width):
     out = []
     for i in range(0, len(s), width):
-        chunk = s[i:i + width].strip()
+        chunk = s[i : i + width].strip()
         if chunk:
             out.append(float(chunk))
     return out
+
 
 def _is_data_line(line):
     s = line.strip()
     if not s:
         return False
-    
+
     up = s.upper()
 
     _KEYWORDS = (
-        "FINISH", "NBLOCK", "EBLOCK", "CMBLOCK", "ETBLOCK",
-        "/PREP7", "/SOLU", "/POST1", "/EOF",
-        "KEYOPT", "MPDATA", "MPTEMP", "LOCAL", "SECBLOCK",
-        "RLBLOCK", "DBLOCK", "FBLOCK", "SFEBLOCK",
+        "FINISH",
+        "NBLOCK",
+        "EBLOCK",
+        "CMBLOCK",
+        "ETBLOCK",
+        "/PREP7",
+        "/SOLU",
+        "/POST1",
+        "/EOF",
+        "KEYOPT",
+        "MPDATA",
+        "MPTEMP",
+        "LOCAL",
+        "SECBLOCK",
+        "RLBLOCK",
+        "DBLOCK",
+        "FBLOCK",
+        "SFEBLOCK",
     )
     for kw in _KEYWORDS:
         if up.startswith(kw):
             return False
-        
+
     if re.match(r"^[A-Z]{1,8},", up):
         return False
 
@@ -192,7 +266,7 @@ def _is_data_line(line):
         return False
 
     return True
-    
+
 
 # READ
 def read(filename):
@@ -281,7 +355,7 @@ def _read_lines(lines):
                     i += 1
                     break
 
-                rs = (_slice_reals(l[n_int * iw:], rw) + [0.0, 0.0, 0.0])[:3]
+                rs = (_slice_reals(l[n_int * iw :], rw) + [0.0, 0.0, 0.0])[:3]
                 node_id.append(nid)
                 coords.append(rs)
                 i += 1
@@ -311,7 +385,7 @@ def _read_lines(lines):
             if num_elem and flat and len(flat) % num_elem == 0:
                 rec = len(flat) // num_elem
                 for k in range(num_elem):
-                    chunk = flat[k * rec:(k + 1) * rec]
+                    chunk = flat[k * rec : (k + 1) * rec]
                     elements.append((active_type, chunk[0], chunk[1:]))
             elif flat:
                 raise ReadError(
@@ -538,7 +612,7 @@ def write(filename, mesh):
 
 def _write_items(f, vals):
     for i in range(0, len(vals), 8):
-        f.write("".join(f"{v:10d}" for v in vals[i:i + 8]) + "\n")
+        f.write("".join(f"{v:10d}" for v in vals[i : i + 8]) + "\n")
 
 
 register_format("ansysInp", [".cdb", ".inp"], read, {"ansysInp": write})

@@ -1,7 +1,7 @@
 import copy
 import pathlib
-from functools import partial
 import textwrap
+from functools import partial
 
 import numpy as np
 import pytest

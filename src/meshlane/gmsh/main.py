@@ -216,9 +216,7 @@ def _convert_med_tags_to_gmsh(mesh):
             dim_tags[rem, 1] = int(new_geom[0][0]) if new_geom else 1
         point_data["gmsh:dim_tags"] = dim_tags
     else:
-        point_data["gmsh:dim_tags"] = np.asarray(
-            point_data["gmsh:dim_tags"], dtype=int
-        )
+        point_data["gmsh:dim_tags"] = np.asarray(point_data["gmsh:dim_tags"], dtype=int)
 
     dim_val = new_cells[0].dim if new_cells else 2
     field_data = {name: [tag, dim_val] for name, tag in group_to_phys.items()}

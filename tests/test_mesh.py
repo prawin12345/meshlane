@@ -138,13 +138,19 @@ def test_remove_duplicate_cells_skips_polyhedron():
     # polyhedron rows are lists of face arrays, not flat node lists: dedup must
     # skip them (no crash) while still de-duplicating regular blocks.
     poly = np.empty(1, dtype=object)
-    poly[0] = [np.array([0, 1, 2]), np.array([0, 1, 3]),
-               np.array([1, 2, 3]), np.array([2, 0, 3])]
+    poly[0] = [
+        np.array([0, 1, 2]),
+        np.array([0, 1, 3]),
+        np.array([1, 2, 3]),
+        np.array([2, 0, 3]),
+    ]
     pts = np.random.rand(4, 3)
     mesh = meshlane.Mesh(
         pts,
-        [("polyhedron4", poly),
-         ("triangle", np.array([[0, 1, 2], [0, 2, 1]]))],  # cell 1 dups cell 0
+        [
+            ("polyhedron4", poly),
+            ("triangle", np.array([[0, 1, 2], [0, 2, 1]])),
+        ],  # cell 1 dups cell 0
     )
     assert mesh.remove_duplicate_cells(dry_run=True) == 1
     n = mesh.remove_duplicate_cells()

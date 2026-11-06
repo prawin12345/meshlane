@@ -214,17 +214,17 @@ def read_buffer(f):
     counter = 0
 
     # cells, one block for each Abaqus *ELEMENT section
-    cell_types = []            # block order = order of first appearance
-    cell_rows = []             # per block: list of node-id rows (raw abaqus ids)
-    elem_id_to_block = {}      # global element id -> block index
-    elem_id_to_local = {}      # global element id -> local index within block
+    cell_types = []  # block order = order of first appearance
+    cell_rows = []  # per block: list of node-id rows (raw abaqus ids)
+    elem_id_to_block = {}  # global element id -> block index
+    elem_id_to_local = {}  # global element id -> local index within block
 
     # sets
-    point_sets_raw = {}        # name -> array of node ids
-    elset_order = []           # definition order (for by-name resolution)
-    elset_from_element = {}    # name -> [element ids]  (ELSET= on *ELEMENT)
-    elset_numeric = {}         # name -> array of element ids (explicit *ELSET)
-    elset_byname = {}          # name -> [referenced set names]
+    point_sets_raw = {}  # name -> array of node ids
+    elset_order = []  # definition order (for by-name resolution)
+    elset_from_element = {}  # name -> [element ids]  (ELSET= on *ELEMENT)
+    elset_numeric = {}  # name -> array of element ids (explicit *ELSET)
+    elset_byname = {}  # name -> [referenced set names]
 
     field_data = {}
     cell_data = {}
@@ -232,7 +232,7 @@ def read_buffer(f):
     point_sets = {}
     cell_sets = {}
 
-    included = []              # meshes pulled in via *INCLUDE
+    included = []  # meshes pulled in via *INCLUDE
 
     def _add_block(cell_type, id_array, conn_array):
         # register one cell block from numpy id + connectivity arrays.
@@ -265,10 +265,10 @@ def read_buffer(f):
     # a new, globally-unique id. Once ids are unique, an instance is just another
     # batch of nodes and cells: the ordinary finalize step (id resolver and sets)
     # handles it with no assembly-specific code.
-    parts = {}            # part name -> template dict
+    parts = {}  # part name -> template dict
     instantiated_parts = set()
-    inst_maps = {}        # instance name -> (local_node_id->syn, local_elem_id->syn)
-    asm_node_syn = {}     # assembly-level (orphan) node id -> syn
+    inst_maps = {}  # instance name -> (local_node_id->syn, local_elem_id->syn)
+    asm_node_syn = {}  # assembly-level (orphan) node id -> syn
     syn = [1_000_000_000]
 
     def _add_nset(name, syn_ids):
@@ -799,7 +799,7 @@ def _read_part(f, line):
     """Read a `*Part` block (local node/element numbering) into a template dict."""
     name = get_param_map(line, required_keys=["NAME"]).get("NAME")
     node_ids, coords = [], []
-    sections = []          # [(cell_type, [(elem_id, [node_ids]), ...]), ...]
+    sections = []  # [(cell_type, [(elem_id, [node_ids]), ...]), ...]
     nsets, elsets = {}, {}
     line = f.readline()
     while line:
@@ -862,13 +862,17 @@ def _read_part(f, line):
         )
         for ct, elems in sections
     ]
-    return name, {
-        "node_ids": np.array(node_ids, dtype=np.int64),
-        "coords": np.array(coords, dtype=float) if coords else np.zeros((0, 3)),
-        "sections": np_sections,
-        "nsets": nsets,
-        "elsets": elsets,
-    }, line
+    return (
+        name,
+        {
+            "node_ids": np.array(node_ids, dtype=np.int64),
+            "coords": np.array(coords, dtype=float) if coords else np.zeros((0, 3)),
+            "sections": np_sections,
+            "nsets": nsets,
+            "elsets": elsets,
+        },
+        line,
+    )
 
 
 def write(

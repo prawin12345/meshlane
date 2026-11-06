@@ -241,7 +241,9 @@ def read_write(plot=False):
             ["out.xdmf", "out0.bin", "out1.bin"],
         ),
         "XDMF (HDF, GZIP)": (
-            lambda f, m: meshlane.xdmf.write(f, m, data_format="HDF", compression="gzip"),
+            lambda f, m: meshlane.xdmf.write(
+                f, m, data_format="HDF", compression="gzip"
+            ),
             meshlane.xdmf.read,
             ["out.xdmf", "out.h5"],
         ),

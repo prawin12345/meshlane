@@ -23,7 +23,9 @@ from . import helpers
     ],
 )
 def test_io(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshlane.medit.write, meshlane.medit.read, mesh, 1.0e-15)
+    helpers.write_read(
+        tmp_path, meshlane.medit.write, meshlane.medit.read, mesh, 1.0e-15
+    )
 
 
 def test_generic_io(tmp_path):

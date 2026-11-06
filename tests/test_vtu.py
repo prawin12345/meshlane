@@ -47,7 +47,9 @@ def test(mesh, data_type, tmp_path):
     binary, compression = data_type
 
     def writer(*args, **kwargs):
-        return meshlane.vtu.write(*args, binary=binary, compression=compression, **kwargs)
+        return meshlane.vtu.write(
+            *args, binary=binary, compression=compression, **kwargs
+        )
 
     # ASCII files are only meant for debugging, VTK stores only 11 digits
     # <https://gitlab.kitware.com/vtk/vtk/-/issues/17038#note_264052>

@@ -17,6 +17,7 @@ It handles two kinds of 3D cell: regular cells, with a fixed node count per
 type (tetra 4, pyramid 5,...) stored as a rectangular array; and polyhedra,
 with a variable number of faces and nodes per cell.
 """
+
 import numpy as np
 
 # The faces of each cell type, in MED's node order (from MEDCoupling's
@@ -26,13 +27,23 @@ _RAW_FACES = {
     "tetra": [[0, 2, 1], [0, 3, 2], [2, 3, 1], [1, 3, 0]],
     "pyramid": [[0, 3, 2, 1], [0, 4, 3], [3, 4, 2], [2, 4, 1], [1, 4, 0]],
     "wedge": [[0, 2, 1], [3, 4, 5], [0, 3, 5, 2], [2, 5, 4, 1], [1, 4, 3, 0]],
-    "hexahedron": [[0, 3, 2, 1], [4, 5, 6, 7], [0, 4, 7, 3],
-                   [3, 7, 6, 2], [2, 6, 5, 1], [1, 5, 4, 0]],
+    "hexahedron": [
+        [0, 3, 2, 1],
+        [4, 5, 6, 7],
+        [0, 4, 7, 3],
+        [3, 7, 6, 2],
+        [2, 6, 5, 1],
+        [1, 5, 4, 0],
+    ],
 }
 # Quadratic types reuse their linear base's faces (the pass only needs the
 # corner faces).
-_QUADRATIC_BASE = {"tetra10": "tetra", "pyramid13": "pyramid",
-                   "wedge15": "wedge", "hexahedron20": "hexahedron"}
+_QUADRATIC_BASE = {
+    "tetra10": "tetra",
+    "pyramid13": "pyramid",
+    "wedge15": "wedge",
+    "hexahedron20": "hexahedron",
+}
 for _q, _b in _QUADRATIC_BASE.items():
     _RAW_FACES[_q] = _RAW_FACES[_b]
 _FACES = {t: [f[::-1] for f in fs] for t, fs in _RAW_FACES.items()}
@@ -47,8 +58,28 @@ _FLIP_PERM = {
     "tetra10": [0, 2, 1, 3, 6, 5, 4, 7, 9, 8],
     "pyramid13": [0, 3, 2, 1, 4, 8, 7, 6, 5, 9, 12, 11, 10],
     "wedge15": [0, 2, 1, 3, 5, 4, 8, 7, 6, 11, 10, 9, 12, 14, 13],
-    "hexahedron20": [0, 3, 2, 1, 4, 7, 6, 5, 11, 10, 9, 8, 15, 14, 13, 12,
-                     16, 19, 18, 17],
+    "hexahedron20": [
+        0,
+        3,
+        2,
+        1,
+        4,
+        7,
+        6,
+        5,
+        11,
+        10,
+        9,
+        8,
+        15,
+        14,
+        13,
+        12,
+        16,
+        19,
+        18,
+        17,
+    ],
 }
 
 ORIENTABLE_TYPES = set(_FACES)
@@ -83,8 +114,7 @@ def _signed_volume(cell_type, conn, points):
         c = fp.mean(axis=1)
         k = len(face)
         for i in range(k):
-            V += np.einsum("ij,ij->i", c,
-                           np.cross(fp[:, i], fp[:, (i + 1) % k])) / 6.0
+            V += np.einsum("ij,ij->i", c, np.cross(fp[:, i], fp[:, (i + 1) % k])) / 6.0
     return V
 
 
@@ -189,8 +219,9 @@ def consistent_orientation_flips(blocks, points):
                 cid = start + j
                 for face in faces:
                     face = np.asarray(face, dtype=np.int64)
-                    _bucket_face(by_size, len(face), face[None, :],
-                                 np.array([cid], np.int64))
+                    _bucket_face(
+                        by_size, len(face), face[None, :], np.array([cid], np.int64)
+                    )
 
     # build shared-face parity constraints
     eA, eB, eP = [], [], []
@@ -241,7 +272,7 @@ def consistent_orientation_flips(blocks, points):
     comp_flip_root = {}
     votes = np.where(have_vol, np.sign(signed), 0.0)
     for i in range(len(bounds) - 1):
-        seg = order[bounds[i]:bounds[i + 1]]
+        seg = order[bounds[i] : bounds[i + 1]]
         root = roots[seg[0]]
         if votes[seg].sum() < 0:  # component mostly inside-out -> flip it
             comp_flip_root[root] = 1
@@ -251,7 +282,7 @@ def consistent_orientation_flips(blocks, points):
 
     masks = []
     for blk, start, cnt in zip(blocks, starts, counts):
-        masks.append(flip[start:start + cnt].astype(bool))
+        masks.append(flip[start : start + cnt].astype(bool))
     return masks
 
 

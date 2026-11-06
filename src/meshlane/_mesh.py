@@ -164,9 +164,11 @@ class Mesh:
                     cell_type,
                     # polyhedron data cannot be converted to numpy arrays
                     # because the sublists don't all have the same length
-                    data
-                    if cell_type.startswith(("polyhedron", "polygon"))
-                    else np.asarray(data),
+                    (
+                        data
+                        if cell_type.startswith(("polyhedron", "polygon"))
+                        else np.asarray(data)
+                    ),
                 )
             self.cells.append(cell_block)
 

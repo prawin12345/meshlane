@@ -1,26 +1,28 @@
 """Tests for the meshlane.ansysInp module."""
+
 import io
-import textwrap
-import tempfile
 import os
+import tempfile
+import textwrap
 
 import numpy as np
 import pytest
 
-from meshlane import Mesh, CellBlock
+from meshlane import CellBlock, Mesh
+
 # Direct imports from the internal module for in-memory tests
 from meshlane.ansysInp._ansysInp import (
-    _read_lines,
-    _slice_ints,
     _int_width,
-    _real_width,
     _is_data_line,
+    _read_lines,
+    _real_width,
+    _slice_ints,
     read,
     write,
 )
 
-
 # Helper: write to a StringIO buffer via a temporary file
+
 
 def _write_to_str(mesh: Mesh) -> str:
     """Writes mesh to a temporary file and returns the content."""
@@ -188,17 +190,21 @@ MULTI_RANGE_CMBLOCK_INP = textwrap.dedent("""\
 
 
 def _make_tetra_mesh() -> Mesh:
-    points = np.array([
-        [0.0, 0.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0],
-    ], dtype=float)
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=float,
+    )
     cells = [CellBlock("tetra", np.array([[0, 1, 2, 3]], dtype=np.int64))]
     return Mesh(points=points, cells=cells)
 
 
 # Tests: low-level helpers
+
 
 class TestHelpers:
 
@@ -259,6 +265,7 @@ class TestHelpers:
 
 
 # Tests: reading
+
 
 class TestRead:
 
@@ -322,6 +329,7 @@ class TestRead:
 
     def test_no_block_raises(self):
         from meshlane._exceptions import ReadError
+
         with pytest.raises(ReadError):
             _read_from_str("/PREP7\nFINISH\n")
 
@@ -333,6 +341,7 @@ class TestRead:
 
 
 # Tests: writing
+
 
 class TestWrite:
 
@@ -364,6 +373,7 @@ class TestWrite:
 
     def test_unknown_type_raises(self):
         from meshlane._exceptions import WriteError
+
         mesh = Mesh(
             points=np.zeros((3, 3)),
             cells=[CellBlock("polygon", np.array([[0, 1, 2]]))],
@@ -383,6 +393,7 @@ class TestWrite:
 
 # Tests: 2D (plane) meshes -> PLANE182/183, boundary edges -> node components
 
+
 class TestPlane2D:
     """A 2D mesh (points with 2 columns) is a plane model: surface elements
     become PLANE182/183, and 1D boundary blocks are dropped and re-expressed as
@@ -392,8 +403,12 @@ class TestPlane2D:
         # a single triangle6 surface plus one line3 boundary edge grouped as "edge"
         points = np.array(
             [
-                [0.0, 0.0], [1.0, 0.0], [0.0, 1.0],
-                [0.5, 0.0], [0.5, 0.5], [0.0, 0.5],
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [0.0, 1.0],
+                [0.5, 0.0],
+                [0.5, 0.5],
+                [0.0, 0.5],
             ],
             dtype=float,
         )
@@ -432,8 +447,16 @@ class TestPlane2D:
         # PLANE183 quad8 must declare KEYOPT(1)=0 (8-node quadrilateral)
         mesh = Mesh(
             points=np.array(
-                [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0],
-                 [1.0, 0.0], [2.0, 1.0], [1.0, 2.0], [0.0, 1.0]],
+                [
+                    [0.0, 0.0],
+                    [2.0, 0.0],
+                    [2.0, 2.0],
+                    [0.0, 2.0],
+                    [1.0, 0.0],
+                    [2.0, 1.0],
+                    [1.0, 2.0],
+                    [0.0, 1.0],
+                ],
                 dtype=float,
             ),
             cells=[CellBlock("quad8", np.array([[0, 1, 2, 3, 4, 5, 6, 7]]))],
@@ -466,8 +489,12 @@ class TestPlane2D:
         mesh = Mesh(
             points=np.array(
                 [
-                    [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 1.0],
-                    [0.5, 0.0, 0.0], [0.5, 0.5, 0.5], [0.0, 0.5, 0.5],
+                    [0.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 1.0],
+                    [0.5, 0.0, 0.0],
+                    [0.5, 0.5, 0.5],
+                    [0.0, 0.5, 0.5],
                 ],
                 dtype=float,
             ),
@@ -478,8 +505,14 @@ class TestPlane2D:
     def _plane_2d_mesh(self):
         return Mesh(
             points=np.array(
-                [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0],
-                 [0.5, 0.0], [0.5, 0.5], [0.0, 0.5]],
+                [
+                    [0.0, 0.0],
+                    [1.0, 0.0],
+                    [0.0, 1.0],
+                    [0.5, 0.0],
+                    [0.5, 0.5],
+                    [0.0, 0.5],
+                ],
                 dtype=float,
             ),
             cells=[CellBlock("triangle6", np.array([[0, 1, 2, 3, 4, 5]]))],
@@ -501,8 +534,14 @@ class TestPlane2D:
         # 2D: the plane/shell distinction comes from the element family, not z
         mesh = Mesh(
             points=np.array(
-                [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
-                 [0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]],
+                [
+                    [0.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.5, 0.0, 0.0],
+                    [0.5, 0.5, 0.0],
+                    [0.0, 0.5, 0.0],
+                ],
                 dtype=float,
             ),
             cells=[CellBlock("triangle6", np.array([[0, 1, 2, 3, 4, 5]]))],
@@ -513,11 +552,12 @@ class TestPlane2D:
 
 # Tests: roundtrip read -> write -> read
 
+
 class TestRoundtrip:
 
     def _roundtrip(self, content: str) -> tuple[Mesh, Mesh]:
         original = _read_from_str(content)
-        written  = _write_to_str(original)
+        written = _write_to_str(original)
         restored = _read_from_str(written)
         return original, restored
 
@@ -539,9 +579,8 @@ class TestRoundtrip:
 
     def test_point_set_content_preserved(self):
         orig, rt = self._roundtrip(CUBE_TETRA_INP)
-        assert (
-            set(orig.point_sets["BOTTOM"].tolist())
-            == set(rt.point_sets["BOTTOM"].tolist())
+        assert set(orig.point_sets["BOTTOM"].tolist()) == set(
+            rt.point_sets["BOTTOM"].tolist()
         )
 
     def test_cell_set_names_preserved(self):
@@ -550,6 +589,7 @@ class TestRoundtrip:
 
 
 # Tests: higher-order elements (connectivity spans EBLOCK continuation lines)
+
 
 class TestHigherOrderElements:
 
@@ -572,6 +612,7 @@ class TestHigherOrderElements:
 
 # Tests: CMBLOCK component decoding edge cases
 
+
 class TestCMBlockEdgeCases:
 
     def test_multi_range_expands_correctly(self):
@@ -585,6 +626,7 @@ class TestCMBlockEdgeCases:
         a clean ReadError instead of a TypeError.
         """
         from meshlane._exceptions import ReadError
+
         with pytest.raises(ReadError, match="range marker"):
             _read_from_str(BAD_CMBLOCK_INP)
 
@@ -603,7 +645,7 @@ def _fmt_compact_eblock(elems):
     for eid, nodes in enumerate(elems, 1):
         vals = [eid] + list(nodes)
         for k in range(0, len(vals), 11):  # 11 fields per line, wrap
-            lines.append("".join(f"{v:9d}" for v in vals[k:k + 11]))
+            lines.append("".join(f"{v:9d}" for v in vals[k : k + 11]))
     lines.append("       -1")
     return "\n".join(lines)
 
@@ -611,11 +653,20 @@ def _fmt_compact_eblock(elems):
 class TestCompactEblock:
     def test_1i9_nblock_and_compact_hex(self):
         # unit cube, SOLID185 (linear hex), COMPACT eblock, 1-integer NBLOCK
-        coords = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0),
-                  (0, 0, 1), (1, 0, 1), (1, 1, 1), (0, 1, 1)]
+        coords = [
+            (0, 0, 0),
+            (1, 0, 0),
+            (1, 1, 0),
+            (0, 1, 0),
+            (0, 0, 1),
+            (1, 0, 1),
+            (1, 1, 1),
+            (0, 1, 1),
+        ]
         inp = (
             "/PREP7\net,1,185\nMAT,1 $ TYPE,1 $ REAL,1\n"
-            + _fmt_1i9_nblock(coords) + "\n"
+            + _fmt_1i9_nblock(coords)
+            + "\n"
             + _fmt_compact_eblock([list(range(1, 9))])
         )
         mesh = _read_from_str(inp)
@@ -632,7 +683,8 @@ class TestCompactEblock:
         coords = [(float(i), 0.0, 0.0) for i in range(20)]
         inp = (
             "/PREP7\net,1,186\nMAT,1 $ TYPE,1 $ REAL,1\n"
-            + _fmt_1i9_nblock(coords) + "\n"
+            + _fmt_1i9_nblock(coords)
+            + "\n"
             + _fmt_compact_eblock([list(range(1, 21))])
         )
         mesh = _read_from_str(inp)
@@ -645,11 +697,13 @@ class TestCompactEblock:
 # Tests: ANSYS degenerate solids (tet/wedge/pyramid stored as hexes) and
 # contact/target element skipping.
 
+
 class TestDegenerateAndContact:
     def _deck(self, coords, ansys_num, conn):
         return (
             f"/PREP7\net,1,{ansys_num}\nMAT,1 $ TYPE,1 $ REAL,1\n"
-            + _fmt_1i9_nblock(coords) + "\n"
+            + _fmt_1i9_nblock(coords)
+            + "\n"
             + _fmt_compact_eblock(conn)
         )
 
@@ -663,8 +717,7 @@ class TestDegenerateAndContact:
 
     def test_degenerate_hex_to_wedge(self):
         # SOLID185 wedge stored as "I J K K M N O O" (K=L and O=P)
-        coords = [(0, 0, 0), (1, 0, 0), (0, 1, 0),
-                  (0, 0, 1), (1, 0, 1), (0, 1, 1)]
+        coords = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 0, 1), (0, 1, 1)]
         mesh = _read_from_str(self._deck(coords, 185, [[1, 2, 3, 3, 4, 5, 6, 6]]))
         assert mesh.cells[0].type == "wedge"
         assert mesh.cells[0].data[0].tolist() == [0, 1, 2, 3, 4, 5]
@@ -678,8 +731,16 @@ class TestDegenerateAndContact:
 
     def test_genuine_hex_stays_hex(self):
         # 8 distinct corner nodes must remain a hexahedron (no false collapse)
-        coords = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0),
-                  (0, 0, 1), (1, 0, 1), (1, 1, 1), (0, 1, 1)]
+        coords = [
+            (0, 0, 0),
+            (1, 0, 0),
+            (1, 1, 0),
+            (0, 1, 0),
+            (0, 0, 1),
+            (1, 0, 1),
+            (1, 1, 1),
+            (0, 1, 1),
+        ]
         mesh = _read_from_str(self._deck(coords, 185, [list(range(1, 9))]))
         assert mesh.cells[0].type == "hexahedron"
 
@@ -688,19 +749,29 @@ class TestDegenerateAndContact:
         # via an APDL parameter ("*set,cid,3" + "et,cid,174"). The patch must be
         # dropped, and *set/label resolution must work (otherwise the patch would
         # be misread as a solid tetra).
-        coords = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0),
-                  (0, 0, 1), (1, 0, 1), (1, 1, 1), (0, 1, 1)]
-        inp = "\n".join([
-            "/PREP7",
-            "*set,cid,3",
-            "et,1,185",
-            "et,cid,174",
-            _fmt_1i9_nblock(coords),
-            "MAT,1 $ TYPE,1 $ REAL,1",
-            _fmt_compact_eblock([list(range(1, 9))]),   # solid hex
-            "MAT,3 $ TYPE,3 $ REAL,3",
-            _fmt_compact_eblock([[1, 2, 3, 4]]),        # CONTA174 patch -> skipped
-        ])
+        coords = [
+            (0, 0, 0),
+            (1, 0, 0),
+            (1, 1, 0),
+            (0, 1, 0),
+            (0, 0, 1),
+            (1, 0, 1),
+            (1, 1, 1),
+            (0, 1, 1),
+        ]
+        inp = "\n".join(
+            [
+                "/PREP7",
+                "*set,cid,3",
+                "et,1,185",
+                "et,cid,174",
+                _fmt_1i9_nblock(coords),
+                "MAT,1 $ TYPE,1 $ REAL,1",
+                _fmt_compact_eblock([list(range(1, 9))]),  # solid hex
+                "MAT,3 $ TYPE,3 $ REAL,3",
+                _fmt_compact_eblock([[1, 2, 3, 4]]),  # CONTA174 patch -> skipped
+            ]
+        )
         mesh = _read_from_str(inp)
         assert len(mesh.cells) == 1
         assert mesh.cells[0].type == "hexahedron"
@@ -711,19 +782,25 @@ class TestDegenerateAndContact:
         # tetra10 must place each midside node at the midpoint of its edge, which
         # validates the ANSYS hex20 -> tetra10 node mapping geometrically.
         coords = [
-            (0, 0, 0), (2, 0, 0), (0, 2, 0), (0, 0, 2),    # 1..4 corners I,J,K,M
-            (1, 0, 0), (1, 1, 0), (0, 1, 0),               # 5,6,7 = IJ, JK, KI
-            (0, 0, 1), (1, 0, 1), (0, 1, 1),               # 8,9,10 = IM, JM, KM
+            (0, 0, 0),
+            (2, 0, 0),
+            (0, 2, 0),
+            (0, 0, 2),  # 1..4 corners I,J,K,M
+            (1, 0, 0),
+            (1, 1, 0),
+            (0, 1, 0),  # 5,6,7 = IJ, JK, KI
+            (0, 0, 1),
+            (1, 0, 1),
+            (0, 1, 1),  # 8,9,10 = IM, JM, KM
         ]
-        conn = [[1, 2, 3, 3, 4, 4, 4, 4,
-                 5, 6, 3, 7, 4, 4, 4, 4, 8, 9, 10, 10]]
+        conn = [[1, 2, 3, 3, 4, 4, 4, 4, 5, 6, 3, 7, 4, 4, 4, 4, 8, 9, 10, 10]]
         mesh = _read_from_str(self._deck(coords, 186, conn))
         assert mesh.cells[0].type == "tetra10"
         assert mesh.cells[0].data.shape == (1, 10)
         c = mesh.points[mesh.cells[0].data[0]]
-        assert np.allclose(c[4], (c[0] + c[1]) / 2)   # edge (0,1)
-        assert np.allclose(c[5], (c[1] + c[2]) / 2)   # edge (1,2)
-        assert np.allclose(c[6], (c[2] + c[0]) / 2)   # edge (2,0)
-        assert np.allclose(c[7], (c[0] + c[3]) / 2)   # edge (0,3)
-        assert np.allclose(c[8], (c[1] + c[3]) / 2)   # edge (1,3)
-        assert np.allclose(c[9], (c[2] + c[3]) / 2)   # edge (2,3)
+        assert np.allclose(c[4], (c[0] + c[1]) / 2)  # edge (0,1)
+        assert np.allclose(c[5], (c[1] + c[2]) / 2)  # edge (1,2)
+        assert np.allclose(c[6], (c[2] + c[0]) / 2)  # edge (2,0)
+        assert np.allclose(c[7], (c[0] + c[3]) / 2)  # edge (0,3)
+        assert np.allclose(c[8], (c[1] + c[3]) / 2)  # edge (1,3)
+        assert np.allclose(c[9], (c[2] + c[3]) / 2)  # edge (2,3)

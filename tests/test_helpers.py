@@ -56,17 +56,11 @@ def test_msh_format_selection_for_med_data():
     cells = [CellBlock("triangle", np.array([[0, 1, 2]]))]
 
     # Case 1: MED mesh (cell_tags) → gmsh
-    mesh = meshlane.Mesh(
-        points, cells,
-        cell_data={"cell_tags": [np.array([-1])]}
-    )
+    mesh = meshlane.Mesh(points, cells, cell_data={"cell_tags": [np.array([-1])]})
     assert _pick_best_format(["ansys", "gmsh"], mesh) == "gmsh"
 
     # Case 2: Gmsh mesh (gmsh:physical) → gmsh
-    mesh2 = meshlane.Mesh(
-        points, cells,
-        cell_data={"gmsh:physical": [np.array([1])]}
-    )
+    mesh2 = meshlane.Mesh(points, cells, cell_data={"gmsh:physical": [np.array([1])]})
     assert _pick_best_format(["ansys", "gmsh"], mesh2) == "gmsh"
 
     # Case 3: bare mesh → Gmsh too (Fluent only with file_format="ansys")

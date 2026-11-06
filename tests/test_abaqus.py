@@ -24,7 +24,9 @@ from . import helpers
     ],
 )
 def test(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshlane.abaqus.write, meshlane.abaqus.read, mesh, 1.0e-15)
+    helpers.write_read(
+        tmp_path, meshlane.abaqus.write, meshlane.abaqus.read, mesh, 1.0e-15
+    )
 
 
 @pytest.mark.parametrize(
@@ -181,9 +183,9 @@ def test_assembly_instances(tmp_path):
     f = tmp_path / "asm.inp"
     f.write_text(deck)
     m = meshlane.read(f)
-    assert len(m.points) == 12                       # 3 instances x 4 nodes
-    assert sum(len(c.data) for c in m.cells) == 3    # 3 tetra
-    assert np.allclose(m.points[4], [10.0, 0.0, 0.0])            # I2 translated
+    assert len(m.points) == 12  # 3 instances x 4 nodes
+    assert sum(len(c.data) for c in m.cells) == 3  # 3 tetra
+    assert np.allclose(m.points[4], [10.0, 0.0, 0.0])  # I2 translated
     assert np.allclose(m.points[9], [0.0, 1.0, 0.0], atol=1e-9)  # I3 (1,0,0)->(0,1,0)
-    assert len(m.point_sets["CORNER"]) == 3          # part set, unioned over 3
+    assert len(m.point_sets["CORNER"]) == 3  # part set, unioned over 3
     assert np.allclose(m.points[m.point_sets["TOP"][0]], [11.0, 0.0, 0.0])

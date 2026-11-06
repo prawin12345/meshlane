@@ -62,6 +62,13 @@ where = ["src"]
 [tool.isort]
 profile = "black"
 
+[dependency-groups]
+dev = [
+    "black",
+    "isort",
+]
+
+
 # [options.data_files]
 # share/paraview-5.9/plugins =
 #     tools/paraview-meshlane-plugin.py

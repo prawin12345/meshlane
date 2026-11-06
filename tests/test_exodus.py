@@ -28,7 +28,9 @@ test_set = [
 
 @pytest.mark.parametrize("mesh", test_set)
 def test_io(mesh, tmp_path):
-    helpers.write_read(tmp_path, meshlane.exodus.write, meshlane.exodus.read, mesh, 1.0e-15)
+    helpers.write_read(
+        tmp_path, meshlane.exodus.write, meshlane.exodus.read, mesh, 1.0e-15
+    )
 
 
 def test_generic_io(tmp_path):

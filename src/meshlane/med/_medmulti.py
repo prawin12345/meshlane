@@ -19,33 +19,33 @@ Two things are essential for medfile / Salome / mdump to read the result:
     inside ._med._write_families.
 """
 
-import numpy as np
 from collections import Counter, defaultdict
+
+import numpy as np
 
 from .._common import num_nodes_per_cell
 from .._exceptions import WriteError
 from .._mesh import Mesh
-from ._med41 import FieldBitmaskWriter
 from ._med import (
-    meshio_to_med_type,
+    MED_FLOAT64,
+    _families_to_cell_sets,
+    _families_to_point_sets,
+    _med_str,
+    _parse_med_field_name,
+    _read_cells,
+    _read_data,
+    _read_families,
+    _reorder_med_cells,
+    _write_families,
+    _write_field_step,
     med_geo_code,
     med_to_geo_type,
     med_type_to_entity,
+    meshio_to_med_type,
     numpy_to_med_type,
     numpy_void_str,
-    MED_FLOAT64,
-    _med_str,
-    _reorder_med_cells,
-    _write_families,
-    _read_cells,
-    _read_families,
-    _families_to_point_sets,
-    _families_to_cell_sets,
-    _read_data,
-    _parse_med_field_name,
-    _write_field_step,
 )
-
+from ._med41 import FieldBitmaskWriter
 
 
 def _resolve_mesh_names(meshes, mesh_names=None):
@@ -117,8 +117,9 @@ def _bytes_attr(value, fallback=numpy_void_str):
     return np.bytes_(str(value).encode("utf-8"))
 
 
-def _create_field_group(fields, hdf5_name, mesh_name, first_data,
-                        n_components, units, comp_name):
+def _create_field_group(
+    fields, hdf5_name, mesh_name, first_data, n_components, units, comp_name
+):
     """Create (or fetch) the CHA/<field> group with its MED attributes."""
     if hdf5_name in fields:
         return fields[hdf5_name]
@@ -278,9 +279,7 @@ def _write_med_multi(filename, meshes, mesh_names=None, med_version="4.1.0", **k
         med_mesh.attrs.create("UNI", _bytes_attr(getattr(mesh, "unit_coords", "")))
         med_mesh.attrs.create("SRT", 1)
         axis_names = ["X", "Y", "Z"][: mesh.points.shape[1]]
-        med_mesh.attrs.create(
-            "NOM", np.bytes_("".join(f"{n:<16}" for n in axis_names))
-        )
+        med_mesh.attrs.create("NOM", np.bytes_("".join(f"{n:<16}" for n in axis_names)))
         med_mesh.attrs.create(
             "DES",
             _bytes_attr(
@@ -308,9 +307,7 @@ def _write_med_multi(filename, meshes, mesh_names=None, med_version="4.1.0", **k
         coo.attrs.create("NBR", len(mesh.points))
 
         if "point_tags" in mesh.point_data:
-            fam = nodes_group.create_dataset(
-                "FAM", data=mesh.point_data["point_tags"]
-            )
+            fam = nodes_group.create_dataset("FAM", data=mesh.point_data["point_tags"])
             fam.attrs.create("CGT", 1)
             fam.attrs.create("NBR", len(mesh.points))
 
@@ -507,7 +504,8 @@ def _read_single_mesh(f, name):
     )
 
     result = Mesh(
-        points, cells,
+        points,
+        cells,
         point_data=point_data,
         cell_data=cell_data,
         field_data=field_data,
