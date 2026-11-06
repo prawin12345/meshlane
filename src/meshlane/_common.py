@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Mapping
 from xml.etree import ElementTree as ET
 
 import numpy as np
@@ -95,7 +96,7 @@ def cell_data_from_raw(cells: list[CellBlock], cell_data_raw):
     return {name: np.split(d, cs) for name, d in cell_data_raw.items()}
 
 
-def raw_from_cell_data(cell_data: dict[str, list[NDArray[np.floating]]]):
+def raw_from_cell_data(cell_data: Mapping[str, list[NDArray[np.floating]]]):
     return {name: np.concatenate(value) for name, value in cell_data.items()}
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import pathlib
 from io import BytesIO
-from typing import Any, Self
+from typing import Any, Mapping, Self
 from xml.etree import ElementTree as ET
 
 import numpy as np
@@ -235,7 +235,16 @@ class TimeSeriesReader:
 
 
 class TimeSeriesWriter:
-    def __init__(self, filename, data_format: str = "HDF") -> None:
+    filename: pathlib.Path
+    data_format: str
+    data_counter: int
+    xdmf_file: ET.Element[str]
+    domain: ET.Element[str]
+    collection: ET.Element[str]
+    has_mesh: bool
+    mesh_name: str
+
+    def __init__(self, filename: str | os.PathLike[str], data_format: str = "HDF") -> None:
         if data_format not in ["XML", "Binary", "HDF"]:
             raise WriteError(
                 "Unknown XDMF data format "
@@ -262,7 +271,7 @@ class TimeSeriesWriter:
         self.has_mesh = False
         self.mesh_name = "mesh"
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         if self.data_format == "HDF":
             import h5py
 
@@ -270,7 +279,7 @@ class TimeSeriesWriter:
             self.h5_file = h5py.File(self.h5_filename, "w")
         return self
 
-    def __exit__(self, *_):
+    def __exit__(self, *_) -> None:
         write_xml(self.filename, self.xdmf_file)
         if self.data_format == "HDF":
             self.h5_file.close()
@@ -295,7 +304,7 @@ class TimeSeriesWriter:
         self.cells(cells, grid)
         self.has_mesh = True
 
-    def write_data(self, t, point_data=None, cell_data=None):
+    def write_data(self, t, point_data: dict[str, np.ndarray] | None = None, cell_data: dict[str, list[np.ndarray]] | None = None) -> None:
         cell_data = {} if cell_data is None else cell_data
         # <Grid>
         #   <xi:include xpointer="xpointer(//Grid[@Name=&quot;TimeSeries_phi&quot;]/Grid[1]/*[self::Topology or self::Geometry])" />
@@ -317,11 +326,11 @@ class TimeSeriesWriter:
         # permit old dict structure, convert it to list of tuples
         for name, entry in cell_data.items():
             if isinstance(entry, dict):
-                cell_data[name] = np.array(list(entry.values()))
+                cell_data[name] = list(entry.values())
         if cell_data:
             self.cell_data(cell_data, grid)
 
-    def numpy_to_xml_string(self, data):
+    def numpy_to_xml_string(self, data: np.ndarray) -> str:
         if self.data_format == "XML":
             s = BytesIO()
             fmt = dtype_to_format_string[data.dtype.name]
@@ -342,7 +351,7 @@ class TimeSeriesWriter:
         self.h5_file.create_dataset(name, data=data)
         return os.path.basename(self.h5_filename) + ":/" + name
 
-    def points(self, grid, points):
+    def points(self, grid: ET.Element, points: np.ndarray) -> None:
         if points.shape[1] == 2:
             geometry_type = "XY"
         else:
@@ -437,7 +446,7 @@ class TimeSeriesWriter:
             )
             data_item.text = self.numpy_to_xml_string(cd)
 
-    def point_data(self, point_data: dict[str, np.ndarray], grid: ET.Element):
+    def point_data(self, point_data: dict[str, np.ndarray], grid: ET.Element) -> None:
         for name, data in point_data.items():
             att = ET.SubElement(
                 grid,
@@ -459,7 +468,7 @@ class TimeSeriesWriter:
             data_item.text = self.numpy_to_xml_string(data)
 
     def cell_data(
-        self, cell_data: dict[str, list[np.ndarray]], grid: ET.Element
+        self, cell_data: Mapping[str, list[np.ndarray]], grid: ET.Element
     ) -> None:
         raw = raw_from_cell_data(cell_data)
         for name, data in raw.items():
