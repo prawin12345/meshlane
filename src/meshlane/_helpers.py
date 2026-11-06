@@ -4,7 +4,6 @@ import sys
 from collections.abc import Callable
 from os import PathLike
 from pathlib import Path
-from typing import IO
 
 import numpy as np
 
