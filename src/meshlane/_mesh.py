@@ -148,7 +148,7 @@ class Mesh:
 
     def __init__(
         self,
-        points: NDArray[np.floating],
+        points: NDArray[np.floating] | list[list[float]],
         cells: dict[str, np.ndarray] | list[tuple[str, np.ndarray] | CellBlock],
         point_data: dict[str, np.ndarray] | None = None,
         cell_data: dict[str, list[NDArray[np.floating]]] | None = None,

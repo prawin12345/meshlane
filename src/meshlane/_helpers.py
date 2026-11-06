@@ -19,7 +19,10 @@ _writer_map: dict[str, Callable[[str | PathLike[str] | IO[bytes], Mesh], None]] 
 
 
 def register_format(
-    format_name: str, extensions: list[str], reader, writer_map
+    format_name: str,
+    extensions: list[str],
+    reader: Callable[[str | PathLike[str] | IO[bytes]], Mesh],
+    writer_map: dict[str, Callable[[str | PathLike[str] | IO[bytes], Mesh], None]],
 ) -> None:
     for ext in extensions:
         if ext not in extension_to_filetypes:
