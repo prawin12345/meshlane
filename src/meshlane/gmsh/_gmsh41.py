@@ -34,7 +34,7 @@ def _size_type(data_size):
     return np.dtype(f"u{data_size}")
 
 
-def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int):
+def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int) -> Mesh:
     # The format is specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 

@@ -30,7 +30,7 @@ c_int: np.dtype[np.int32] = np.dtype("i")
 c_double: np.dtype[np.float64] = np.dtype("d")
 
 
-def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int):
+def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int) -> Mesh:
     # The format is specified at
     # <http://gmsh.info//doc/texinfo/gmsh.html#MSH-ASCII-file-format>.
 

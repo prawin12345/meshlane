@@ -40,7 +40,7 @@ _readers: dict[str, Reader] = {
 _writers: dict[str, Writer] = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
-def read(filename: str | PathLike[str]):
+def read(filename: str | PathLike[str]) -> Mesh:
     """Reads a Gmsh msh file."""
     filename = pathlib.Path(filename)
     with open(filename.as_posix(), "rb") as f:
@@ -48,7 +48,7 @@ def read(filename: str | PathLike[str]):
     return mesh
 
 
-def read_buffer(f: IO[bytes]):
+def read_buffer(f: IO[bytes]) -> Mesh:
     # The various versions of the format are specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#File-formats>.
     line = f.readline().decode().strip()
@@ -119,7 +119,7 @@ def write(
     fmt_version: str = "4.1",
     binary: bool = True,
     float_fmt: str = ".16e",
-):
+) -> None:
     """Writes a Gmsh msh file."""
     mesh = _convert_med_tags_to_gmsh(mesh)
     try:
