@@ -156,7 +156,6 @@ def write(
     filename: str | PathLike[str],
     mesh: Mesh,
     file_format: str | None = None,
-    **kwargs,
 ) -> None:
     """Writes mesh together with data to a file.
 
@@ -203,4 +202,4 @@ def write(
             pass
 
     # Write
-    return writer(filename, mesh, **kwargs)
+    return writer(filename, mesh)
