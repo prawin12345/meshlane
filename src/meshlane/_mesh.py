@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from os import PathLike
-from typing import IO, Self
+from typing import IO, Mapping, Self, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -141,7 +141,7 @@ class Mesh:
     points: NDArray[np.floating]
     cells: list[CellBlock]
     cell_sets: dict[str, list[NDArray[np.integer]]]
-    field_data: dict[str, NDArray[np.integer]]
+    field_data: Mapping[str, NDArray[np.integer] | list[int]]
     point_data: dict[str, NDArray[np.floating]]
     point_sets: dict[str, NDArray[np.integer]]
     cell_data: dict[str, list[NDArray[np.floating]]]
@@ -149,10 +149,10 @@ class Mesh:
     def __init__(
         self,
         points: NDArray[np.floating] | list[list[float]],
-        cells: dict[str, np.ndarray] | list[tuple[str, np.ndarray] | CellBlock],
+        cells: dict[str, np.ndarray] | Sequence[tuple[str, np.ndarray] | CellBlock],
         point_data: dict[str, np.ndarray] | None = None,
         cell_data: dict[str, list[NDArray[np.floating]]] | None = None,
-        field_data: dict[str, NDArray[np.integer]] | None = None,
+        field_data: Mapping[str, NDArray[np.integer] | list[int]] | None = None,
         point_sets: dict[str, NDArray[np.integer]] | None = None,
         cell_sets: dict[str, list[NDArray[np.integer]]] | None = None,
         gmsh_periodic=None,
@@ -275,7 +275,7 @@ class Mesh:
 
     def write(
         self,
-        path_or_buf: str | PathLike[str] | IO[bytes],
+        path_or_buf: str | PathLike[str],
         file_format: str | None = None,
         **kwargs,
     ) -> None:
@@ -400,7 +400,7 @@ class Mesh:
     @classmethod
     def read(
         cls,
-        path_or_buf: str | PathLike[str] | IO[bytes],
+        path_or_buf: str | PathLike[str],
         file_format: str | None = None,
     ) -> Mesh:
         # avoid circular import

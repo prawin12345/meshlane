@@ -6,8 +6,10 @@ I/O for Gmsh's msh format (version 4.0, as used by Gmsh 4.1.5), cf.
 from __future__ import annotations
 
 from functools import partial
+from typing import IO
 
 import numpy as np
+from numpy.typing import NDArray
 
 from .._common import cell_data_from_raw, num_nodes_per_cell, raw_from_cell_data
 from .._exceptions import ReadError
@@ -30,7 +32,7 @@ c_ulong = np.dtype("L")
 c_double = np.dtype("d")
 
 
-def read_buffer(f, is_ascii: bool, data_size) -> Mesh:
+def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int) -> Mesh:
     # Initialize the optional data fields
     points = []
     field_data = {}
@@ -39,6 +41,10 @@ def read_buffer(f, is_ascii: bool, data_size) -> Mesh:
     point_data = {}
     physical_tags = None
     periodic = None
+
+    point_tags: None | np.ndarray = None
+    cells: list[CellBlock] = []
+
     while True:
         line = f.readline().decode()
         if not line:
@@ -55,6 +61,7 @@ def read_buffer(f, is_ascii: bool, data_size) -> Mesh:
         elif environ == "Nodes":
             points, point_tags = _read_nodes(f, is_ascii)
         elif environ == "Elements":
+            assert point_tags is not None
             cells, cell_tags = _read_elements(f, point_tags, physical_tags, is_ascii)
         elif environ == "Periodic":
             periodic = _read_periodic(f, is_ascii)
@@ -104,7 +111,7 @@ def _read_entities(f, is_ascii: bool):
     return physical_tags
 
 
-def _read_nodes(f, is_ascii):
+def _read_nodes(f: IO[bytes], is_ascii: bool) -> tuple[np.ndarray, np.ndarray]:
     if is_ascii:
         # first line: numEntityBlocks(unsigned long) numNodes(unsigned long)
         line = f.readline().decode()
@@ -152,7 +159,9 @@ def _read_nodes(f, is_ascii):
     return points, tags
 
 
-def _read_elements(f, point_tags, physical_tags, is_ascii):
+def _read_elements(
+    f: IO[bytes], point_tags: NDArray[np.integer], physical_tags, is_ascii: bool
+) -> tuple[list[CellBlock], dict[str, list[np.ndarray]]]:
     fromfile = partial(np.fromfile, sep=" " if is_ascii else "")
 
     # numEntityBlocks(unsigned long) numElements(unsigned long)
@@ -189,8 +198,8 @@ def _read_elements(f, point_tags, physical_tags, is_ascii):
         for physical_tag, geom_tag, tpe, d in data
     ]
 
-    cells = []
-    cell_data = {}
+    cells: list[CellBlock] = []
+    cell_data: dict[str, list[np.ndarray]] = {}
     for physical_tag, geom_tag, key, values in data:
         cells.append(CellBlock(key, _gmsh_to_meshio_order(key, values)))
         if physical_tag:

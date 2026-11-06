@@ -14,15 +14,15 @@ from ._files import is_buffer
 from ._mesh import CellBlock, Mesh
 
 extension_to_filetypes: dict[str, list[str]] = {}
-reader_map: dict[str, Callable[[str | PathLike[str] | IO[bytes]], Mesh]] = {}
-_writer_map: dict[str, Callable[[str | PathLike[str] | IO[bytes], Mesh], None]] = {}
+reader_map: dict[str, Callable[[str | PathLike[str]], Mesh]] = {}
+_writer_map: dict[str, Callable[[str | PathLike[str], Mesh], None]] = {}
 
 
 def register_format(
     format_name: str,
     extensions: list[str],
-    reader: Callable[[str | PathLike[str] | IO[bytes]], Mesh],
-    writer_map: dict[str, Callable[[str | PathLike[str] | IO[bytes], Mesh], None]],
+    reader: Callable[[str | PathLike[str]], Mesh],
+    writer_map: dict[str, Callable[[str | PathLike[str], Mesh], None]],
 ) -> None:
     for ext in extensions:
         if ext not in extension_to_filetypes:
@@ -62,9 +62,7 @@ def _filetypes_from_path(path: Path) -> list[str]:
     return out
 
 
-def read(
-    filename: str | PathLike[str] | IO[bytes], file_format: str | None = None
-) -> Mesh:
+def read(filename: str | PathLike[str], file_format: str | None = None) -> Mesh:
     """Reads an unstructured mesh with added data.
 
     :param filenames: The files/PathLikes to read from.
@@ -78,9 +76,7 @@ def read(
     return _read_file(Path(filename), file_format)
 
 
-def _read_buffer(
-    filename: str | PathLike[str] | IO[bytes], file_format: str | None
-) -> Mesh:
+def _read_buffer(filename: str | PathLike[str], file_format: str | None) -> Mesh:
     if file_format is None:
         raise ReadError("File format must be given if buffer is used")
     if file_format == "tetgen":
@@ -157,7 +153,7 @@ def _pick_best_format(file_formats, mesh):
 
 
 def write(
-    filename: str | PathLike[str] | IO[bytes],
+    filename: str | PathLike[str],
     mesh: Mesh,
     file_format: str | None = None,
     **kwargs,

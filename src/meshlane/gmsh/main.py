@@ -1,6 +1,8 @@
 import copy
 import pathlib
 import struct
+from os import PathLike
+from typing import IO, Any, Protocol
 
 import numpy as np
 
@@ -10,13 +12,35 @@ from .._mesh import CellBlock, Mesh
 from . import _gmsh22, _gmsh40, _gmsh41
 from .common import _fast_forward_to_end_block
 
+
+class Reader(Protocol):
+    @staticmethod
+    def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int) -> Mesh: ...
+
+
+class Writer(Protocol):
+    @staticmethod
+    def write(
+        filename: str | PathLike[str],
+        mesh: Mesh,
+        float_fmt: str = "",
+        binary: bool = True,
+    ): ...
+
+
 # Some mesh files out there have the version specified as version "2" when it really is
 # "2.2". Same with "4" vs "4.1".
-_readers = {"2": _gmsh22, "2.2": _gmsh22, "4.0": _gmsh40, "4": _gmsh41, "4.1": _gmsh41}
-_writers = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
+_readers: dict[str, Reader] = {
+    "2": _gmsh22,
+    "2.2": _gmsh22,
+    "4.0": _gmsh40,
+    "4": _gmsh41,
+    "4.1": _gmsh41,
+}
+_writers: dict[str, Writer] = {"2.2": _gmsh22, "4.0": _gmsh40, "4.1": _gmsh41}
 
 
-def read(filename):
+def read(filename: str | PathLike[str]):
     """Reads a Gmsh msh file."""
     filename = pathlib.Path(filename)
     with open(filename.as_posix(), "rb") as f:
@@ -24,7 +48,7 @@ def read(filename):
     return mesh
 
 
-def read_buffer(f):
+def read_buffer(f: IO[bytes]):
     # The various versions of the format are specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#File-formats>.
     line = f.readline().decode().strip()
@@ -52,7 +76,7 @@ def read_buffer(f):
     return reader.read_buffer(f, is_ascii, data_size)
 
 
-def _read_header(f):
+def _read_header(f: IO[bytes]) -> tuple[str, int, bool]:
     """Read the mesh format block
 
     specified as
@@ -89,7 +113,13 @@ def _read_header(f):
 
 # Gmsh ASCII output uses `%.16g` for floating point values,
 # meshlane uses same precision but exponential notation `%.16e`.
-def write(filename, mesh, fmt_version="4.1", binary=True, float_fmt=".16e"):
+def write(
+    filename: str | PathLike[str],
+    mesh: Mesh,
+    fmt_version: str = "4.1",
+    binary: bool = True,
+    float_fmt: str = ".16e",
+):
     """Writes a Gmsh msh file."""
     mesh = _convert_med_tags_to_gmsh(mesh)
     try:
@@ -118,7 +148,7 @@ register_format(
 )
 
 
-def _convert_med_tags_to_gmsh(mesh):
+def _convert_med_tags_to_gmsh(mesh: Mesh) -> Mesh:
     is_med_data = (
         "cell_tags" in mesh.cell_data
         or "point_tags" in mesh.point_data
@@ -131,7 +161,7 @@ def _convert_med_tags_to_gmsh(mesh):
 
     mesh = copy.deepcopy(mesh)
     # Mapping from group name to physical tag, and from family id to physical tag.
-    family_groups = getattr(mesh, "cell_tags", {})
+    family_groups: dict[Any, str] = getattr(mesh, "cell_tags", {})
     group_names = sorted({n for names in family_groups.values() for n in names})
     group_to_phys = {name: i for i, name in enumerate(group_names, start=1)}
     # Mapping from family id to physical tag
@@ -160,9 +190,9 @@ def _convert_med_tags_to_gmsh(mesh):
     if not needs_split:
         return _cleanup_med_fields(mesh, group_to_phys)
 
-    new_cells = []
-    new_geom = []
-    new_phys = []
+    new_cells: list[CellBlock] = []
+    new_geom: list[np.ndarray] = []
+    new_phys: list[np.ndarray] = []
     entity_counter = 1
 
     for i, cb in enumerate(mesh.cells):

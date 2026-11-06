@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+from typing import IO
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -27,7 +28,7 @@ def _fast_forward_to_end_block(f, block):
         warn(f"${block} not closed by $End{block}.")
 
 
-def _fast_forward_over_blank_lines(f):
+def _fast_forward_over_blank_lines(f: IO[bytes]):
     is_eof = False
     while True:
         line = f.readline().decode()

@@ -5,6 +5,8 @@ from xml.etree import ElementTree as ET
 import numpy as np
 from rich.console import Console
 
+from src.meshlane import CellBlock
+
 # See <https://github.com/nschloe/meshio/wiki/Node-ordering-in-cells> for the node
 # ordering.
 num_nodes_per_cell = {
@@ -87,7 +89,7 @@ num_nodes_per_cell = {
 }
 
 
-def cell_data_from_raw(cells, cell_data_raw):
+def cell_data_from_raw(cells: list[CellBlock], cell_data_raw):
     cs = np.cumsum([len(c) for c in cells])[:-1]
     return {name: np.split(d, cs) for name, d in cell_data_raw.items()}
 

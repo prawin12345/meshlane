@@ -4,6 +4,8 @@ I/O for Gmsh's msh format (version 4.1, as used by Gmsh 4.2.2+), cf.
 """
 
 from functools import partial
+from os import PathLike
+from typing import IO
 
 import numpy as np
 
@@ -32,7 +34,7 @@ def _size_type(data_size):
     return np.dtype(f"u{data_size}")
 
 
-def read_buffer(f, is_ascii: bool, data_size):
+def read_buffer(f: IO[bytes], is_ascii: bool, data_size: int):
     # The format is specified at
     # <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
 
@@ -47,6 +49,10 @@ def read_buffer(f, is_ascii: bool, data_size):
     bounding_entities = None
     cell_sets = {}
     periodic = None
+
+    point_tags: None | np.ndarray = None
+    point_entities: None | np.ndarray = None
+
     while True:
         # fast-forward over blank lines
         line, is_eof = _fast_forward_over_blank_lines(f)
@@ -296,7 +302,12 @@ def _read_periodic(f, is_ascii, data_size):
     return periodic
 
 
-def write(filename, mesh, float_fmt=".16e", binary=True):
+def write(
+    filename: str | PathLike[str],
+    mesh: Mesh,
+    float_fmt: str = ".16e",
+    binary: bool = True,
+):
     """Writes msh files, cf.
     <http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format>.
     """
