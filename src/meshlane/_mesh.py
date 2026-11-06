@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import copy
+from os import PathLike
+from typing import IO, Self
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import NDArray
 
 from ._common import num_nodes_per_cell, warn
 
@@ -87,10 +89,15 @@ topological_dimension = {
 
 
 class CellBlock:
+    type: str
+    data: NDArray[np.integer]
+    dim: int
+    tags: list[str]
+
     def __init__(
         self,
         cell_type: str,
-        data: list | np.ndarray,
+        data: np.ndarray,
         tags: list[str] | None = None,
     ):
         self.type = cell_type
@@ -131,15 +138,24 @@ class CellBlock:
 
 
 class Mesh:
+    points: NDArray[np.floating]
+    cells: list[CellBlock]
+    cell_sets: dict[str, list[NDArray[np.integer]]]
+    field_data: dict[str, NDArray[np.integer]]
+    point_data: dict[str, NDArray[np.floating]]
+    point_sets: dict[str, NDArray[np.integer]]
+    cell_data: dict[str, list[NDArray[np.floating]]]
+
+
     def __init__(
         self,
-        points: ArrayLike,
-        cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
-        point_data: dict[str, ArrayLike] | None = None,
-        cell_data: dict[str, list[ArrayLike]] | None = None,
-        field_data=None,
-        point_sets: dict[str, ArrayLike] | None = None,
-        cell_sets: dict[str, list[ArrayLike]] | None = None,
+        points: NDArray[np.floating],
+        cells: dict[str, np.ndarray] | list[tuple[str, np.ndarray] | CellBlock],
+        point_data: dict[str, np.ndarray] | None = None,
+        cell_data: dict[str, list[NDArray[np.floating]]] | None = None,
+        field_data:  dict[str, NDArray[np.integer]] | None = None,
+        point_sets: dict[str, NDArray[np.integer]] | None = None,
+        cell_sets: dict[str, list[NDArray[np.integer]]] | None = None,
         gmsh_periodic=None,
         info=None,
     ):
@@ -209,7 +225,7 @@ class Mesh:
                         + f"corresponding cell data item has length {len(data[k])}."
                     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         lines = ["<meshlane mesh object>", f"  Number of points: {len(self.points)}"]
         special_cells = [
             "polygon",
@@ -255,26 +271,26 @@ class Mesh:
 
         return "\n".join(lines)
 
-    def copy(self):
+    def copy(self) -> Self:
         return copy.deepcopy(self)
 
-    def write(self, path_or_buf, file_format: str | None = None, **kwargs):
+    def write(self, path_or_buf: str | PathLike[str] | IO[bytes], file_format: str | None = None, **kwargs) -> None:
         # avoid circular import
         from ._helpers import write
 
         write(path_or_buf, self, file_format, **kwargs)
 
-    def get_cells_type(self, cell_type: str):
+    def get_cells_type(self, cell_type: str) -> NDArray[np.integer]:
         if not any(c.type == cell_type for c in self.cells):
-            return np.empty((0, num_nodes_per_cell[cell_type]), dtype=int)
+            return np.empty((0, num_nodes_per_cell[cell_type]), dtype=np.integer)
         return np.concatenate([c.data for c in self.cells if c.type == cell_type])
 
-    def get_cell_data(self, name: str, cell_type: str):
+    def get_cell_data(self, name: str, cell_type: str) -> NDArray[np.floating]:
         return np.concatenate(
             [d for c, d in zip(self.cells, self.cell_data[name]) if c.type == cell_type]
         )
 
-    def remove_duplicate_cells(self, dry_run=False):
+    def remove_duplicate_cells(self, dry_run: bool = False):
         """Remove cells that duplicate another cell of the same type (identical
         node set, order-independent), keeping the first occurrence. Returns the
         number removed; with ``dry_run=True`` returns the number that *would* be
@@ -323,34 +339,35 @@ class Mesh:
         return n_removed
 
     @property
-    def cells_dict(self):
-        cells_dict = {}
+    def cells_dict(self) -> dict[str, NDArray[np.integer]]:
+        cells_dict: dict[str, list[NDArray[np.integer]]] = {}
         for cell_block in self.cells:
             if cell_block.type not in cells_dict:
                 cells_dict[cell_block.type] = []
             cells_dict[cell_block.type].append(cell_block.data)
         # concatenate
+        cells_dict_concat: dict[str, NDArray[np.integer]] = {}
         for key, value in cells_dict.items():
-            cells_dict[key] = np.concatenate(value)
-        return cells_dict
+            cells_dict_concat[key] = np.concatenate(value)
+        return cells_dict_concat
 
     @property
-    def cell_data_dict(self):
-        cell_data_dict = {}
+    def cell_data_dict(self) -> dict[str, dict[str, NDArray[np.floating]]]:
+        cell_data_dict: dict[str, dict[str, NDArray[np.floating]]] = {}
         for key, value_list in self.cell_data.items():
-            cell_data_dict[key] = {}
+            cell_data: dict[str, list[NDArray[np.floating]]] = {}
             for value, cell_block in zip(value_list, self.cells):
-                if cell_block.type not in cell_data_dict[key]:
-                    cell_data_dict[key][cell_block.type] = []
-                cell_data_dict[key][cell_block.type].append(value)
+                if cell_block.type not in cell_data:
+                    cell_data[cell_block.type] = []
+                cell_data[cell_block.type].append(value)
 
-            for cell_type, val in cell_data_dict[key].items():
+            for cell_type, val in cell_data.items():
                 cell_data_dict[key][cell_type] = np.concatenate(val)
         return cell_data_dict
 
     @property
-    def cell_sets_dict(self):
-        sets_dict = {}
+    def cell_sets_dict(self) -> dict[str, dict[str, NDArray[np.integer]]]:
+        sets_dict: dict[str, dict[str, list[NDArray[np.integer]]]] = {}
         for key, member_list in self.cell_sets.items():
             sets_dict[key] = {}
             offsets = {}
@@ -377,7 +394,7 @@ class Mesh:
         }
 
     @classmethod
-    def read(cls, path_or_buf, file_format=None):
+    def read(cls, path_or_buf: str | PathLike[str] | IO[bytes], file_format: str | None = None) -> Mesh:
         # avoid circular import
         from ._helpers import read
 
@@ -385,7 +402,7 @@ class Mesh:
         warn("meshlane.Mesh.read is deprecated, use meshlane.read instead")
         return read(path_or_buf, file_format)
 
-    def cell_sets_to_data(self, data_name: str | None = None):
+    def cell_sets_to_data(self, data_name: str | None = None) -> None:
         # If possible, convert cell sets to integer cell data. This is possible if all
         # cells appear exactly in one group.
         default_value = -1
@@ -436,7 +453,7 @@ class Mesh:
     # This used to be int_data_to_sets(), converting _all_ cell and point data.
     # This is not useful in many cases, as one usually only wants one
     # particular data array (e.g., "MaterialIDs") converted to sets.
-    def cell_data_to_sets(self, key: str):
+    def cell_data_to_sets(self, key: str) -> None:
         """Convert point_data to cell_sets."""
         data = self.cell_data[key]
 
@@ -464,7 +481,7 @@ class Mesh:
         # remove the cell data
         del self.cell_data[key]
 
-    def point_data_to_sets(self, key: str):
+    def point_data_to_sets(self, key: str) -> None:
         """Convert point_data to point_sets."""
         data = self.point_data[key]
 

@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from os import PathLike
 import sys
 from pathlib import Path
+from typing import IO
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 from ._common import error, num_nodes_per_cell
 from ._exceptions import ReadError, WriteError
 from ._files import is_buffer
 from ._mesh import CellBlock, Mesh
 
-extension_to_filetypes = {}
-reader_map = {}
-_writer_map = {}
+extension_to_filetypes: dict[str, list[str]] = {}
+reader_map: dict[str, Callable[[str | PathLike[str] | IO[bytes]], Mesh]] = {}
+_writer_map: dict[str, Callable[[str | PathLike[str] | IO[bytes], Mesh], None]] = {}
 
 
 def register_format(
@@ -57,7 +59,7 @@ def _filetypes_from_path(path: Path) -> list[str]:
     return out
 
 
-def read(filename, file_format: str | None = None):
+def read(filename: str | PathLike[str] | IO[bytes], file_format: str | None = None) -> Mesh:
     """Reads an unstructured mesh with added data.
 
     :param filenames: The files/PathLikes to read from.
@@ -71,7 +73,7 @@ def read(filename, file_format: str | None = None):
     return _read_file(Path(filename), file_format)
 
 
-def _read_buffer(filename, file_format: str | None):
+def _read_buffer(filename: str | PathLike[str] | IO[bytes], file_format: str | None) -> Mesh:
     if file_format is None:
         raise ReadError("File format must be given if buffer is used")
     if file_format == "tetgen":
@@ -85,7 +87,7 @@ def _read_buffer(filename, file_format: str | None):
     return reader_map[file_format](filename)
 
 
-def _read_file(path: Path, file_format: str | None):
+def _read_file(path: Path, file_format: str | None) -> Mesh:
     if not path.exists():
         raise ReadError(f"File {path} not found.")
 
@@ -115,17 +117,17 @@ def _read_file(path: Path, file_format: str | None):
 
 
 def write_points_cells(
-    filename,
-    points: ArrayLike,
-    cells: dict[str, ArrayLike] | list[tuple[str, ArrayLike] | CellBlock],
-    point_data: dict[str, ArrayLike] | None = None,
-    cell_data: dict[str, list[ArrayLike]] | None = None,
+    filename: str | PathLike[str] | IO[bytes],
+    points: np.ndarray,
+    cells: dict[str, np.ndarray] | list[tuple[str, np.ndarray] | CellBlock],
+    point_data: dict[str, np.ndarray] | None = None,
+    cell_data: dict[str, list[np.ndarray]] | None = None,
     field_data=None,
-    point_sets: dict[str, ArrayLike] | None = None,
-    cell_sets: dict[str, list[ArrayLike]] | None = None,
+    point_sets: dict[str, np.ndarray] | None = None,
+    cell_sets: dict[str, list[np.ndarray]] | None = None,
     file_format: str | None = None,
     **kwargs,
-):
+) -> None:
     points = np.asarray(points)
     mesh = Mesh(
         points,
@@ -147,7 +149,7 @@ def _pick_best_format(file_formats, mesh):
     return file_formats[0]
 
 
-def write(filename, mesh: Mesh, file_format: str | None = None, **kwargs):
+def write(filename: str | PathLike[str] | IO[bytes], mesh: Mesh, file_format: str | None = None, **kwargs) -> None:
     """Writes mesh together with data to a file.
 
     :params filename: File to write to.

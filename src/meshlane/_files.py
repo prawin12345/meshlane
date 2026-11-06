@@ -1,7 +1,10 @@
 from contextlib import contextmanager
+from typing import IO
+
+from typing_extensions import TypeIs
 
 
-def is_buffer(obj, mode):
+def is_buffer(obj: object, mode: str) -> TypeIs[IO]:
     return ("r" in mode and hasattr(obj, "read")) or (
         "w" in mode and hasattr(obj, "write")
     )
